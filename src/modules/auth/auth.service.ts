@@ -46,7 +46,10 @@ export class AuthService {
   async register(dto: RegisterDto) {
     // 验证验证码
     const key = `sms:code:${dto.mobile}`;
-    const stored = await this.redisService.getJson<{ code: string; createdAt: number }>(key);
+    const stored = await this.redisService.getJson<{
+      code: string;
+      createdAt: number;
+    }>(key);
     if (!stored) {
       throw new UnauthorizedException('验证码已过期');
     }
@@ -77,13 +80,25 @@ export class AuthService {
     });
 
     // 初始积分
-    await this.pointsService.addPoints(user.id, 2000, PointsSourceType.REGISTER, 0, '注册赠送');
+    await this.pointsService.addPoints(
+      user.id,
+      2000,
+      PointsSourceType.REGISTER,
+      0,
+      '注册赠送',
+    );
 
     // 邀请人奖励
     if (dto.inviteCode) {
       const inviter = await this.userService.findByInviteCode(dto.inviteCode);
       if (inviter) {
-        await this.pointsService.addPoints(inviter.id, 100, PointsSourceType.INVITE, user.id, '邀请用户注册');
+        await this.pointsService.addPoints(
+          inviter.id,
+          100,
+          PointsSourceType.INVITE,
+          user.id,
+          '邀请用户注册',
+        );
       }
     }
 
@@ -93,6 +108,7 @@ export class AuthService {
     return this.generateToken(user);
   }
 
+  // TODO ok
   async login(dto: LoginDto) {
     const user = await this.userService.findByMobile(dto.mobile);
     if (!user) {

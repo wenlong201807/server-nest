@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
@@ -9,7 +13,14 @@ import { User } from '../user/entities/user.entity';
 import { Certification } from '../certification/entities/certification.entity';
 import { PostReport } from '../square/entities/report.entity';
 import { SquarePost } from '../square/entities/post.entity';
-import { UserStatus, CertificationStatus, PostStatus, HandleStatus, PointsSourceType } from '@common/constants';
+import {
+  UserStatus,
+  CertificationStatus,
+  PostStatus,
+  HandleStatus,
+  PointsSourceType,
+} from '@common/constants';
+import { AdminLoginDto } from './dto/admin.dto';
 
 @Injectable()
 export class AdminService {
@@ -28,9 +39,23 @@ export class AdminService {
     private certificationService: CertificationService,
   ) {}
 
-  async login(username: string, password: string) {
+  async login(dto: AdminLoginDto) {
     // TODO: 实现管理员认证
-    if (username === 'admin' && password === 'admin123') {
+    if (dto.username === 'admin' && dto.password === 'admin123') {
+      return {
+        token: 'admin_token_' + Date.now(),
+        admin: {
+          id: 1,
+          username: 'admin',
+          role: 'super_admin',
+        },
+      };
+    }
+    throw new UnauthorizedException('用户名或密码错误');
+  }
+  async login22(dto: AdminLoginDto) {
+    // TODO: 实现管理员认证
+    if (dto.username === 'admin' && dto.password === 'admin123') {
       return {
         token: 'admin_token_' + Date.now(),
         admin: {
@@ -43,7 +68,12 @@ export class AdminService {
     throw new UnauthorizedException('用户名或密码错误');
   }
 
-  async getUsers(page: number = 1, pageSize: number = 20, keyword?: string, status?: number) {
+  async getUsers(
+    page: number = 1,
+    pageSize: number = 20,
+    keyword?: string,
+    status?: number,
+  ) {
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .where('user.deletedAt IS NULL');
@@ -65,7 +95,7 @@ export class AdminService {
       .getManyAndCount();
 
     return {
-      list: list.map(u => ({
+      list: list.map((u) => ({
         ...u,
         mobile: u.mobile.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'),
       })),
@@ -76,7 +106,13 @@ export class AdminService {
   }
 
   async adjustPoints(userId: number, amount: number, reason: string) {
-    await this.pointsService.addPoints(userId, amount, PointsSourceType.REGISTER, 0, reason);
+    await this.pointsService.addPoints(
+      userId,
+      amount,
+      PointsSourceType.REGISTER,
+      0,
+      reason,
+    );
     return { message: '积分调整成功' };
   }
 
@@ -87,7 +123,11 @@ export class AdminService {
     return { message: '状态更新成功' };
   }
 
-  async getCertifications(page: number = 1, pageSize: number = 20, status?: number) {
+  async getCertifications(
+    page: number = 1,
+    pageSize: number = 20,
+    status?: number,
+  ) {
     const queryBuilder = this.certificationRepository
       .createQueryBuilder('cert')
       .leftJoinAndSelect('cert.user', 'user');
@@ -110,12 +150,21 @@ export class AdminService {
     if (status === CertificationStatus.APPROVED) {
       await this.certificationService.approve(id, 1);
     } else {
-      await this.certificationService.reject(id, 1, rejectReason || '审核未通过');
+      await this.certificationService.reject(
+        id,
+        1,
+        rejectReason || '审核未通过',
+      );
     }
     return { message: '审核完成' };
   }
 
-  async getPosts(page: number = 1, pageSize: number = 20, status?: number, keyword?: string) {
+  async getPosts(
+    page: number = 1,
+    pageSize: number = 20,
+    status?: number,
+    keyword?: string,
+  ) {
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.user', 'user');
@@ -125,7 +174,9 @@ export class AdminService {
     }
 
     if (keyword) {
-      queryBuilder.andWhere('post.content LIKE :keyword', { keyword: `%${keyword}%` });
+      queryBuilder.andWhere('post.content LIKE :keyword', {
+        keyword: `%${keyword}%`,
+      });
     }
 
     queryBuilder.orderBy('post.createdAt', 'DESC');
@@ -148,7 +199,13 @@ export class AdminService {
     await this.postRepository.save(post);
 
     if (deductPoints && deductPoints > 0) {
-      await this.pointsService.addPoints(post.userId, -deductPoints, PointsSourceType.DEDUCT_VIOLATION, id, reason);
+      await this.pointsService.addPoints(
+        post.userId,
+        -deductPoints,
+        PointsSourceType.DEDUCT_VIOLATION,
+        id,
+        reason,
+      );
     }
 
     return { message: '删除成功' };
@@ -212,7 +269,9 @@ export class AdminService {
   }
 
   async getStatistics(startDate?: string, endDate?: string) {
-    const userCount = await this.userRepository.count({ where: { deletedAt: null as any } });
+    const userCount = await this.userRepository.count({
+      where: { deletedAt: null as any },
+    });
     const postCount = await this.postRepository.count();
 
     return {

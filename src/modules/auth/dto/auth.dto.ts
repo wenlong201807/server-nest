@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
 import { Gender } from '@common/constants';
 
 export class SmsDto {
@@ -41,6 +47,7 @@ export class RegisterDto {
   inviteCode?: string;
 }
 
+// TODO
 export class LoginDto {
   @ApiProperty({ description: '手机号' })
   @IsString()
