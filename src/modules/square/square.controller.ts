@@ -39,11 +39,13 @@ export class SquareController {
   @Get('posts')
   @ApiOperation({ summary: '获取帖子列表' })
   async getPosts(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '20',
     @Query('sort') sort: string = 'latest',
   ) {
-    return this.squareService.getPosts(Number(page), Number(pageSize), sort);
+    const numPage = parseInt(page, 10) || 1;
+    const numPageSize = parseInt(pageSize, 10) || 20;
+    return this.squareService.getPosts(numPage, numPageSize, sort);
   }
 
   @Get('posts/:id/comments')

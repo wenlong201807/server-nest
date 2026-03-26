@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { ChatMessage } from './entities/message.entity';
@@ -20,7 +24,10 @@ export class ChatService {
 
   async sendMessage(userId: number, dto: SendMessageDto) {
     // 检查是否是好友
-    const friendship = await this.friendService.isFriend(userId, dto.receiverId);
+    const friendship = await this.friendService.isFriend(
+      userId,
+      dto.receiverId,
+    );
     if (!friendship) {
       throw new BadRequestException('请先解锁私聊');
     }
@@ -87,7 +94,7 @@ export class ChatService {
       .getManyAndCount();
 
     return {
-      list: list.reverse().map(msg => ({
+      data: list.reverse().map((msg) => ({
         ...msg,
         isSelf: msg.senderId === userId,
       })),
@@ -110,7 +117,8 @@ export class ChatService {
     const conversations = new Map<number, any>();
 
     for (const msg of messages) {
-      const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+      const otherUserId =
+        msg.senderId === userId ? msg.receiverId : msg.senderId;
 
       if (!conversations.has(otherUserId)) {
         const user = await this.userService.findById(otherUserId);
@@ -141,7 +149,10 @@ export class ChatService {
     );
   }
 
-  private async getUnreadCount(userId: number, senderId: number): Promise<number> {
+  private async getUnreadCount(
+    userId: number,
+    senderId: number,
+  ): Promise<number> {
     return this.messageRepository.count({
       where: {
         senderId,
