@@ -1,16 +1,14 @@
-import { Controller, Get, Put, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('user')
 @Controller('user')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class UserController {
   constructor(private userService: UserService) {}
 

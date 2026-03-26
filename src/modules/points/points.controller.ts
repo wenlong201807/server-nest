@@ -1,15 +1,13 @@
-import { Controller, Get, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PointsService } from './points.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('points')
 @Controller('points')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class PointsController {
   constructor(private pointsService: PointsService) {}
 
@@ -35,8 +33,8 @@ export class PointsController {
   @ApiOperation({ summary: '获取积分流水' })
   async getLogs(
     @CurrentUser('sub') userId: number,
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('type') type?: number,
   ) {
     return this.pointsService.getLogs(userId, page, pageSize, type);

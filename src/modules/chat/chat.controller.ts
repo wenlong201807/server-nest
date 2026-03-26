@@ -1,16 +1,14 @@
-import { Controller, Get, Post, Put, Param, Query, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { SendMessageDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class ChatController {
   constructor(private chatService: ChatService) {}
 

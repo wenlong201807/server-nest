@@ -8,6 +8,7 @@ import {
   Query,
   Param,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
@@ -46,8 +47,8 @@ export class AdminController {
   @Get('users')
   @ApiOperation({ summary: '用户列表' })
   async getUsers(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('keyword') keyword?: string,
     @Query('status') status?: number,
   ) {
@@ -57,7 +58,7 @@ export class AdminController {
   @Post('users/:userId/points')
   @ApiOperation({ summary: '调整积分' })
   async adjustPoints(
-    @Param('userId') userId: number,
+    @Param('userId', ParseIntPipe) userId: number,
     @Body('amount') amount: number,
     @Body('reason') reason: string,
   ) {
@@ -67,7 +68,7 @@ export class AdminController {
   @Put('users/:userId/status')
   @ApiOperation({ summary: '封禁/解封用户' })
   async updateStatus(
-    @Param('userId') userId: number,
+    @Param('userId', ParseIntPipe) userId: number,
     @Body('status') status: number,
   ) {
     return this.adminService.updateUserStatus(userId, status);
@@ -76,8 +77,8 @@ export class AdminController {
   @Get('certifications')
   @ApiOperation({ summary: '审核列表' })
   async getCertifications(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('status') status?: number,
   ) {
     return this.adminService.getCertifications(page, pageSize, status);
@@ -86,7 +87,7 @@ export class AdminController {
   @Put('certifications/:id/review')
   @ApiOperation({ summary: '审核认证' })
   async reviewCertification(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body('status') status: number,
     @Body('rejectReason') rejectReason?: string,
   ) {
@@ -96,8 +97,8 @@ export class AdminController {
   @Get('posts')
   @ApiOperation({ summary: '内容管理' })
   async getPosts(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('status') status?: number,
     @Query('keyword') keyword?: string,
   ) {
@@ -107,7 +108,7 @@ export class AdminController {
   @Delete('posts/:id')
   @ApiOperation({ summary: '删除内容' })
   async deletePost(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body('reason') reason?: string,
     @Body('deductPoints') deductPoints?: number,
   ) {
@@ -117,8 +118,8 @@ export class AdminController {
   @Get('reports')
   @ApiOperation({ summary: '举报列表' })
   async getReports(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('status') status?: number,
   ) {
     return this.adminService.getReports(page, pageSize, status);
@@ -127,7 +128,7 @@ export class AdminController {
   @Put('reports/:id/handle')
   @ApiOperation({ summary: '处理举报' })
   async handleReport(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body('action') action: string,
     @Body('deductPoints') deductPoints?: number,
   ) {

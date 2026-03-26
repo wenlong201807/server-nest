@@ -1,16 +1,14 @@
-import { Controller, Get, Post, UseGuards, UseInterceptors, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CertificationService } from './certification.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { CreateCertificationDto } from './dto/certification.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('certification')
 @Controller('certification')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class CertificationController {
   constructor(private certificationService: CertificationService) {}
 

@@ -1,16 +1,14 @@
-import { Controller, Get, Post, Delete, Query, Body, Param, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Query, Body, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SquareService } from './square.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { CreatePostDto, CreateCommentDto, LikeDto, ReportDto } from './dto/square.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('square')
 @Controller('square')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class SquareController {
   constructor(private squareService: SquareService) {}
 
@@ -23,8 +21,8 @@ export class SquareController {
   @Get('posts')
   @ApiOperation({ summary: '获取帖子列表' })
   async getPosts(
-    @Query('page') page: number = 1,
-    @Query('pageSize') pageSize: number = 20,
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('pageSize', ParseIntPipe) pageSize: number = 20,
     @Query('sort') sort: string = 'latest',
   ) {
     return this.squareService.getPosts(page, pageSize, sort);
@@ -32,13 +30,13 @@ export class SquareController {
 
   @Get('post/:id')
   @ApiOperation({ summary: '获取帖子详情' })
-  async getPost(@Param('id') id: number) {
+  async getPost(@Param('id', ParseIntPipe) id: number) {
     return this.squareService.getPost(id);
   }
 
   @Delete('post/:id')
   @ApiOperation({ summary: '删除帖子' })
-  async deletePost(@CurrentUser('sub') userId: number, @Param('id') id: number) {
+  async deletePost(@CurrentUser('sub') userId: number, @Param('id', ParseIntPipe) id: number) {
     return this.squareService.deletePost(userId, id);
   }
 
@@ -50,7 +48,7 @@ export class SquareController {
 
   @Get('post/:id/comments')
   @ApiOperation({ summary: '获取评论列表' })
-  async getComments(@Param('id') postId: number, @Query('page') page: number = 1, @Query('pageSize') pageSize: number = 20) {
+  async getComments(@Param('id', ParseIntPipe) postId: number, @Query('page', ParseIntPipe) page: number = 1, @Query('pageSize', ParseIntPipe) pageSize: number = 20) {
     return this.squareService.getComments(postId, page, pageSize);
   }
 

@@ -1,16 +1,14 @@
-import { Controller, Get, Put, Body, UseGuards, UseInterceptors, Param } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { UpdateProfileDto } from './dto/profile.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 
 @ApiTags('profile')
 @Controller('profile')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-@UseInterceptors(TransformInterceptor)
 export class ProfileController {
   constructor(private profileService: ProfileService) {}
 
