@@ -14,6 +14,7 @@ export class SmsDto {
   @IsNotEmpty()
   mobile: string;
 }
+// git submodule add git@gitee.com:two-join/admin-web.git admin-web
 
 export class RegisterDto {
   @ApiProperty({ description: '手机号' })

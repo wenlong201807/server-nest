@@ -15,7 +15,7 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 import { Public } from '../../common/decorators/public.decorator';
-import { AdminLoginDto, LoginDto22 } from './dto/admin.dto';
+import { AdminLoginDto, AdminSmsDto } from './dto/admin.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -26,20 +26,24 @@ export class AdminController {
   constructor(private adminService: AdminService) {}
 
   @Public()
+  @Post('auth/sms/send')
+  @ApiOperation({ summary: '发送管理员验证码' })
+  async sendSms(@Body() dto: AdminSmsDto) {
+    return this.adminService.sendSms(dto.mobile);
+  }
+
+  @Public()
   @Post('auth/login')
   @ApiOperation({ summary: '管理员登录' })
   async login(@Body() dto: AdminLoginDto) {
     return this.adminService.login(dto);
-    // return this.adminService.login(username, password);
   }
 
   @Public()
   @Post('login22')
   @ApiOperation({ summary: '登录22' })
-  async login22(@Body() abc: LoginDto22) {
-    console.log(abc);
-    // return this.authService.login(dto);
-    return this.adminService.login22(abc);
+  async login22(@Body() dto: AdminLoginDto) {
+    return this.adminService.login22(dto);
   }
 
   @Get('users')

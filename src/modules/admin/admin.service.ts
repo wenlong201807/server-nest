@@ -5,10 +5,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
 import { PointsService } from '../points/points.service';
 import { SquareService } from '../square/square.service';
 import { CertificationService } from '../certification/certification.service';
+import { RedisService } from '@common/redis/redis.service';
 import { User } from '../user/entities/user.entity';
 import { Certification } from '../certification/entities/certification.entity';
 import { PostReport } from '../square/entities/report.entity';
@@ -20,7 +23,14 @@ import {
   HandleStatus,
   PointsSourceType,
 } from '@common/constants';
-import { AdminLoginDto } from './dto/admin.dto';
+import { AdminLoginDto, LoginType } from './dto/admin.dto';
+
+interface AdminUser {
+  id: number;
+  username: string;
+  mobile: string;
+  role: string;
+}
 
 @Injectable()
 export class AdminService {
@@ -37,35 +47,119 @@ export class AdminService {
     private pointsService: PointsService,
     private squareService: SquareService,
     private certificationService: CertificationService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+    private redisService: RedisService,
   ) {}
 
-  async login(dto: AdminLoginDto) {
-    // TODO: 实现管理员认证
-    if (dto.username === 'admin' && dto.password === 'admin123') {
-      return {
-        token: 'admin_token_' + Date.now(),
-        admin: {
-          id: 1,
-          username: 'admin',
-          role: 'super_admin',
-        },
-      };
+  async sendSms(mobile: string) {
+    const rateKey = `admin:sms:rate:${mobile}`;
+    const rate = await this.redisService.get(rateKey);
+    if (rate) {
+      throw new UnauthorizedException('发送过于频繁，请稍后再试');
     }
-    throw new UnauthorizedException('用户名或密码错误');
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const key = `admin:sms:code:${mobile}`;
+
+    await this.redisService.setJson(key, { code, createdAt: Date.now() }, 300);
+    await this.redisService.set(rateKey, '1', 60);
+
+    console.log(`管理员验证码: ${code}`);
+
+    return { message: '验证码已发送' };
   }
-  async login22(dto: AdminLoginDto) {
-    // TODO: 实现管理员认证
-    if (dto.username === 'admin' && dto.password === 'admin123') {
-      return {
-        token: 'admin_token_' + Date.now(),
-        admin: {
-          id: 1,
-          username: 'admin',
-          role: 'super_admin',
-        },
-      };
+
+  async login(dto: AdminLoginDto) {
+    const loginType = dto.loginType || LoginType.USERNAME;
+
+    if (loginType === LoginType.MOBILE_SMS) {
+      return this.loginBySms(dto.account, dto.code);
     }
-    throw new UnauthorizedException('用户名或密码错误');
+
+    return this.loginByPassword(dto.account, dto.password);
+  }
+
+  private async loginByPassword(username: string, password?: string) {
+    if (!password) {
+      throw new UnauthorizedException('密码不能为空');
+    }
+
+    const adminUsername = this.configService.get('ADMIN_USERNAME') || 'admin';
+    const adminPassword = this.configService.get('ADMIN_PASSWORD') || 'admin123';
+
+    if (username !== adminUsername) {
+      throw new UnauthorizedException('管理员不存在');
+    }
+
+    if (password !== adminPassword) {
+      throw new UnauthorizedException('密码错误');
+    }
+
+    return this.generateToken({
+      id: 1,
+      username: adminUsername,
+      mobile: '',
+      role: 'super_admin',
+    });
+  }
+
+  private async loginBySms(mobile: string, code?: string) {
+    if (!code) {
+      throw new UnauthorizedException('验证码不能为空');
+    }
+
+    const key = `admin:sms:code:${mobile}`;
+    const stored = await this.redisService.getJson<{ code: string }>(key);
+    if (!stored) {
+      throw new UnauthorizedException('验证码已过期');
+    }
+    if (stored.code !== code) {
+      throw new UnauthorizedException('验证码错误');
+    }
+
+    await this.redisService.del(key);
+
+    const adminConfig = this.configService.get('ADMIN_CONFIG');
+    const admins = adminConfig?.admins || [];
+    const admin = admins.find((a: any) => a.mobile === mobile);
+
+    if (!admin) {
+      throw new UnauthorizedException('该手机号未绑定管理员');
+    }
+
+    return this.generateToken({
+      id: admin.id || 1,
+      username: admin.username,
+      mobile: admin.mobile,
+      role: admin.role,
+    });
+  }
+
+  private async generateToken(admin: AdminUser) {
+    const payload = {
+      sub: admin.id,
+      username: admin.username,
+      mobile: admin.mobile,
+      role: admin.role,
+      type: 'admin',
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      token,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        mobile: admin.mobile,
+        role: admin.role,
+      },
+    };
+  }
+
+  async login22(dto: AdminLoginDto) {
+    return this.login(dto);
   }
 
   async getUsers(

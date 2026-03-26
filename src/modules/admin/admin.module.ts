@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { UserModule } from '../user/user.module';
@@ -14,6 +15,12 @@ import { SquarePost } from '../square/entities/post.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Certification, PostReport, SquarePost]),
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_SECRET || 'wertogether_secret_key_2024',
+        signOptions: { expiresIn: '7d' },
+      }),
+    }),
     UserModule,
     PointsModule,
     SquareModule,

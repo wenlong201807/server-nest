@@ -7,27 +7,36 @@ import {
   IsNumber,
 } from 'class-validator';
 
-// TODO
-export class AdminLoginDto {
-  @ApiProperty({ description: '用户名' })
-  @IsString()
-  @IsNotEmpty()
-  username: string;
-
-  @ApiProperty({ description: '密码' })
-  @IsString()
-  @IsNotEmpty()
-  password: string;
+export enum LoginType {
+  USERNAME = 'username',
+  MOBILE_SMS = 'mobile_sms',
 }
 
-export class LoginDto22 {
-  @ApiProperty({ description: '手机号22' })
+export class AdminLoginDto {
+  @ApiProperty({ description: '登录类型', enum: LoginType, default: LoginType.USERNAME })
+  @IsEnum(LoginType)
+  @IsOptional()
+  loginType?: LoginType = LoginType.USERNAME;
+
+  @ApiProperty({ description: '用户名/手机号' })
   @IsString()
   @IsNotEmpty()
-  username: string;
+  account: string;
 
   @ApiProperty({ description: '密码' })
   @IsString()
+  @IsOptional()
+  password?: string;
+
+  @ApiProperty({ description: '短信验证码' })
+  @IsString()
+  @IsOptional()
+  code?: string;
+}
+
+export class AdminSmsDto {
+  @ApiProperty({ description: '手机号' })
+  @IsString()
   @IsNotEmpty()
-  password: string;
+  mobile: string;
 }
