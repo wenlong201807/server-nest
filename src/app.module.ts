@@ -16,6 +16,9 @@ import { FriendModule } from './modules/friend/friend.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CertificationModule } from './modules/certification/certification.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PointsConfigModule } from './modules/points-config/points-config.module';
+import { CertificationTypeModule } from './modules/certification-type/certification-type.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { CommonModule } from './common/common.module';
 import { WebSocketModule } from './modules/websocket/websocket.module';
 
@@ -39,6 +42,8 @@ import { ChatMessage } from './modules/chat/entities/message.entity';
 import { SignRecord } from './modules/sign-record/sign-record.entity';
 import { SystemConfig } from './modules/system-config/system-config.entity';
 import { UserViolation } from './modules/user-violation/user-violation.entity';
+import { PointsConfig } from './modules/points-config/entities/points-config.entity';
+import { CertificationType } from './modules/certification-type/entities/certification-type.entity';
 
 @Module({
   imports: [
@@ -73,6 +78,8 @@ import { UserViolation } from './modules/user-violation/user-violation.entity';
           SignRecord,
           SystemConfig,
           UserViolation,
+          PointsConfig,
+          CertificationType,
         ],
         synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
         logging: configService.get('NODE_ENV') === 'development',
@@ -107,6 +114,9 @@ import { UserViolation } from './modules/user-violation/user-violation.entity';
     ChatModule,
     CertificationModule,
     AdminModule,
+    PointsConfigModule,
+    CertificationTypeModule,
+    SystemConfigModule,
     WebSocketModule,
   ],
   controllers: [],

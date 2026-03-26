@@ -6,28 +6,19 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity('system_config')
-export class SystemConfig {
+@Entity('points_config')
+export class PointsConfig {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 100, unique: true })
-  configKey: string;
+  @Column({ type: 'varchar', length: 50, unique: true })
+  key: string;
 
-  @Column({ type: 'text' })
-  configValue: string;
-
-  @Column({ type: 'varchar', length: 20, default: 'string' })
-  valueType: string;
-
-  @Column({ type: 'varchar', length: 50, default: 'general' })
-  group: string;
+  @Column({ type: 'int', default: 0 })
+  value: number;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   description: string;
-
-  @Column({ type: 'tinyint', default: 0 })
-  isPublic: boolean;
 
   @Column({ type: 'tinyint', default: 1 })
   isEnabled: boolean;

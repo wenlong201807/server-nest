@@ -5,6 +5,7 @@ import { UserService } from '../user/user.service';
 import { PointsLog } from './entities/points-log.entity';
 import { PointsType, PointsSourceType } from '@common/constants';
 import { RedisService } from '../../common/redis/redis.service';
+import { PointsConfigService } from '../points-config/points-config.service';
 
 // 计算积分来源映射
 const SOURCE_TYPE_MAP: Record<string, PointsSourceType> = {
@@ -26,6 +27,7 @@ export class PointsService {
     private pointsLogRepository: Repository<PointsLog>,
     private userService: UserService,
     private redisService: RedisService,
+    private pointsConfigService: PointsConfigService,
   ) {}
 
   async getBalance(userId: number) {
@@ -100,11 +102,15 @@ export class PointsService {
       continuousDays = lastSign ? lastSign.continuousDays + 1 : 1;
     }
 
-    // 计算积分
-    let points = 10;
+    // 从配置读取积分
+    const basePoints = await this.pointsConfigService.getValue('sign', 10);
+    const continuousBonus = await this.pointsConfigService.getValue('sign.continuous', 5);
+    const maxContinuous = await this.pointsConfigService.getValue('sign.max_continuous', 7);
+
+    let points = basePoints;
     const description = '每日签到';
-    if (continuousDays > 1) {
-      points += 5;
+    if (continuousDays > 1 && continuousDays <= maxContinuous) {
+      points += continuousBonus;
     }
 
     await this.addPoints(userId, points, PointsSourceType.SIGN, 0, description);

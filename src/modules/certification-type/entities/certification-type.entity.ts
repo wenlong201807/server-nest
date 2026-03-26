@@ -6,31 +6,31 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity('system_config')
-export class SystemConfig {
+@Entity('certification_type')
+export class CertificationType {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 100, unique: true })
-  configKey: string;
+  @Column({ type: 'varchar', length: 30, unique: true })
+  code: string;
 
-  @Column({ type: 'text' })
-  configValue: string;
+  @Column({ type: 'varchar', length: 50 })
+  name: string;
 
-  @Column({ type: 'varchar', length: 20, default: 'string' })
-  valueType: string;
-
-  @Column({ type: 'varchar', length: 50, default: 'general' })
-  group: string;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  icon: string;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   description: string;
 
-  @Column({ type: 'tinyint', default: 0 })
-  isPublic: boolean;
+  @Column({ type: 'json', nullable: true })
+  requiredFields: string[];
 
   @Column({ type: 'tinyint', default: 1 })
   isEnabled: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  sortOrder: number;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
