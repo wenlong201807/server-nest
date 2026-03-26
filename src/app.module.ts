@@ -19,6 +19,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PointsConfigModule } from './modules/points-config/points-config.module';
 import { CertificationTypeModule } from './modules/certification-type/certification-type.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { TestDataModule } from './modules/test-data/test-data.module';
 import { CommonModule } from './common/common.module';
 import { WebSocketModule } from './modules/websocket/websocket.module';
 
@@ -117,6 +118,7 @@ import { CertificationType } from './modules/certification-type/entities/certifi
     PointsConfigModule,
     CertificationTypeModule,
     SystemConfigModule,
+    TestDataModule,
     WebSocketModule,
   ],
   controllers: [],

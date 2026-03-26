@@ -7,6 +7,7 @@ import { UserModule } from '../user/user.module';
 import { PointsModule } from '../points/points.module';
 import { SquareModule } from '../square/square.module';
 import { CertificationModule } from '../certification/certification.module';
+import { PointsConfigModule } from '../points-config/points-config.module';
 import { User } from '../user/entities/user.entity';
 import { Certification } from '../certification/entities/certification.entity';
 import { PostReport } from '../square/entities/report.entity';
@@ -25,6 +26,7 @@ import { SquarePost } from '../square/entities/post.entity';
     PointsModule,
     SquareModule,
     CertificationModule,
+    PointsConfigModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

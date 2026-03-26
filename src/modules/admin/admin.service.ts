@@ -11,6 +11,7 @@ import { UserService } from '../user/user.service';
 import { PointsService } from '../points/points.service';
 import { SquareService } from '../square/square.service';
 import { CertificationService } from '../certification/certification.service';
+import { PointsConfigService } from '../points-config/points-config.service';
 import { RedisService } from '@common/redis/redis.service';
 import { User } from '../user/entities/user.entity';
 import { Certification } from '../certification/entities/certification.entity';
@@ -47,6 +48,7 @@ export class AdminService {
     private pointsService: PointsService,
     private squareService: SquareService,
     private certificationService: CertificationService,
+    private pointsConfigService: PointsConfigService,
     private jwtService: JwtService,
     private configService: ConfigService,
     private redisService: RedisService,
@@ -344,21 +346,20 @@ export class AdminService {
   }
 
   async getConfig() {
-    // TODO: 从系统配置表读取
-    return {
-      'points.register': 2000,
-      'points.sign': 10,
-      'points.sign.continuous': 5,
-      'points.publish': 5,
-      'points.comment': 2,
-      'points.like': 1,
-      'points.invite': 100,
-      'points.unlock_chat': 50,
-    };
+    const list = await this.pointsConfigService.findAll();
+    const config: Record<string, number> = {};
+    list.forEach((item) => {
+      config[`points.${item.key}`] = item.value;
+    });
+    return config;
   }
 
   async updateConfig(config: Record<string, any>) {
-    // TODO: 更新系统配置表
+    const configs = Object.entries(config).map(([key, value]) => {
+      const keyWithoutPrefix = key.replace('points.', '');
+      return { key: keyWithoutPrefix, value: value as number };
+    });
+    await this.pointsConfigService.batchUpdate(configs);
     return { message: '配置更新成功' };
   }
 
