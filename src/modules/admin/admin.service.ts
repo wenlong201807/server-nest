@@ -181,7 +181,7 @@ export class AdminService {
       );
     }
 
-    if (status !== undefined) {
+    if (status !== undefined && !isNaN(status)) {
       queryBuilder.andWhere('user.status = :status', { status });
     }
 
@@ -193,7 +193,7 @@ export class AdminService {
     return {
       list: list.map((u) => ({
         ...u,
-        mobile: u.mobile.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'),
+        mobile: u.mobile ? u.mobile.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '',
       })),
       total,
       page,
