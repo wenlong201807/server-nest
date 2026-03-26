@@ -265,7 +265,7 @@ export class AdminService {
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.user', 'user');
 
-    if (status !== undefined) {
+    if (status !== undefined && !isNaN(status)) {
       queryBuilder.andWhere('post.status = :status', { status });
     }
 

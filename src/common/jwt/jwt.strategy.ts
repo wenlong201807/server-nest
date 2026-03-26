@@ -18,6 +18,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    if (payload.type === 'admin') {
+      return {
+        sub: payload.sub,
+        username: payload.username,
+        mobile: payload.mobile,
+        role: payload.role,
+        type: 'admin',
+      };
+    }
+
     const user = await this.userService.findById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('用户不存在');
