@@ -1,9 +1,26 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
+import { Type } from 'class-transformer';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PointsConfigService } from './points-config.service';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { Public } from '@common/decorators/public.decorator';
-import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 
 class UpdatePointsConfigDto {
   @IsNumber()
@@ -19,8 +36,23 @@ class UpdatePointsConfigDto {
   isEnabled?: boolean;
 }
 
+class BatchConfigItemDto {
+  @IsString()
+  key: string;
+
+  @IsNumber()
+  value: number;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+}
+
 class BatchUpdateDto {
-  configs: { key: string; value: number; description?: string }[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BatchConfigItemDto) // 添加这行
+  configs: BatchConfigItemDto[];
 }
 
 @ApiTags('积分配置')
@@ -52,6 +84,54 @@ export class PointsConfigController {
 
   @Post('batch')
   @ApiOperation({ summary: '批量更新积分配置' })
+  @ApiBody({
+    description: '批量更新积分配置请求体',
+    examples: {
+      default: {
+        summary: '默认示例',
+        value: {
+          configs: [
+            {
+              key: 'points.register',
+              value: 2000,
+              description: '注册赠送积分',
+            },
+            {
+              key: 'points.sign',
+              value: 10,
+              description: '每日签到积分',
+            },
+            {
+              key: 'points.publish',
+              value: 5,
+              description: '发布帖子积分',
+            },
+            {
+              key: 'points.comment',
+              value: 2,
+              description: '评论积分',
+            },
+            {
+              key: 'points.like',
+              value: 1,
+              description: '点赞积分',
+            },
+          ],
+        },
+      },
+      minimal: {
+        summary: '最小示例',
+        value: {
+          configs: [
+            {
+              key: 'points.register',
+              value: 2000,
+            },
+          ],
+        },
+      },
+    },
+  })
   async batchUpdate(@Body() dto: BatchUpdateDto) {
     await this.pointsConfigService.batchUpdate(dto.configs);
     return { message: '批量更新成功' };
