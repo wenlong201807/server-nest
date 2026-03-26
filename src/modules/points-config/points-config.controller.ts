@@ -51,7 +51,7 @@ class BatchConfigItemDto {
 class BatchUpdateDto {
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BatchConfigItemDto) // 添加这行
+  @Type(() => BatchConfigItemDto)
   configs: BatchConfigItemDto[];
 }
 

@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsEnum, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
 import { TargetType, ReportReason } from '@common/constants';
 
 export class CreatePostDto {
@@ -11,6 +19,7 @@ export class CreatePostDto {
   @ApiProperty({ description: '图片列表', required: false })
   @IsArray()
   @IsOptional()
+  @Type(() => String)
   images?: string[];
 }
 

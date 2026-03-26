@@ -1,9 +1,25 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { CertificationTypeService } from './certification-type.service';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { Public } from '@common/decorators/public.decorator';
-import { IsString, IsNumber, IsOptional, IsBoolean, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+} from 'class-validator';
 
 class CreateCertificationTypeDto {
   @IsString()
@@ -22,6 +38,7 @@ class CreateCertificationTypeDto {
 
   @IsArray()
   @IsOptional()
+  @Type(() => String)
   requiredFields?: string[];
 
   @IsNumber()
@@ -84,7 +101,10 @@ export class CertificationTypeAdminController {
 
   @Put(':id')
   @ApiOperation({ summary: '更新认证类型' })
-  async update(@Param('id') id: number, @Body() dto: UpdateCertificationTypeDto) {
+  async update(
+    @Param('id') id: number,
+    @Body() dto: UpdateCertificationTypeDto,
+  ) {
     await this.certificationTypeService.update(id, dto);
     return { message: '更新成功' };
   }
