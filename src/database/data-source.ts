@@ -10,7 +10,7 @@ export const dataSourceOptions: DataSourceOptions = {
   database: process.env.DB_DATABASE || 'wertogether',
   entities: ['src/**/*.entity{.ts,.js}'],
   migrations: ['src/database/migrations/*.ts'],
-  synchronize: false,
+  synchronize: true,
   logging: process.env.NODE_ENV === 'development',
   timezone: '+08:00',
   charset: 'utf8mb4',

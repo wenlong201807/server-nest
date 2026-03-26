@@ -1,11 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SquarePost } from './entities/post.entity';
 import { SquareComment } from './entities/comment.entity';
 import { SquareLike } from './entities/like.entity';
 import { PostReport } from './entities/report.entity';
-import { CreatePostDto, CreateCommentDto, LikeDto, ReportDto } from './dto/square.dto';
+import {
+  CreatePostDto,
+  CreateCommentDto,
+  LikeDto,
+  ReportDto,
+} from './dto/square.dto';
 import { UserService } from '../user/user.service';
 import { PointsService } from '../points/points.service';
 import { PostStatus, TargetType, PointsSourceType } from '@common/constants';
@@ -35,12 +44,21 @@ export class SquareService {
     const saved = await this.postRepository.save(post);
 
     // 增加积分
-    await this.pointsService.addPoints(userId, 5, PointsSourceType.PUBLISH, saved.id);
+    await this.pointsService.addPoints(
+      userId,
+      5,
+      PointsSourceType.PUBLISH,
+      saved.id,
+    );
 
     return { id: saved.id, pointsEarned: 5 };
   }
 
-  async getPosts(page: number = 1, pageSize: number = 20, sort: string = 'latest') {
+  async getPosts(
+    page: number = 1,
+    pageSize: number = 20,
+    sort: string = 'latest',
+  ) {
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.user', 'user')
@@ -57,14 +75,16 @@ export class SquareService {
       .take(pageSize)
       .getManyAndCount();
 
-    const transformedList = list.map(post => ({
+    const transformedList = list.map((post) => ({
       ...post,
-      user: {
-        id: post.user.id,
-        nickname: post.user.nickname,
-        avatarUrl: post.user.avatarUrl,
-        verified: post.user.isVerified,
-      },
+      user: post.user
+        ? {
+            id: post.user.id,
+            nickname: post.user.nickname,
+            avatarUrl: post.user.avatarUrl,
+            verified: post.user.isVerified,
+          }
+        : null,
     }));
 
     return { list: transformedList, total, page, pageSize };
@@ -115,33 +135,45 @@ export class SquareService {
     await this.postRepository.increment({ id: dto.postId }, 'commentCount', 1);
 
     // 增加积分
-    await this.pointsService.addPoints(userId, 2, PointsSourceType.COMMENT, saved.id);
+    await this.pointsService.addPoints(
+      userId,
+      2,
+      PointsSourceType.COMMENT,
+      saved.id,
+    );
 
     return { id: saved.id, pointsEarned: 2 };
   }
 
   async getComments(postId: number, page: number = 1, pageSize: number = 20) {
-    const queryBuilder = this.commentRepository
-      .createQueryBuilder('comment')
-      .leftJoinAndSelect('comment.user', 'user')
-      .where('comment.postId = :postId', { postId })
-      .orderBy('comment.createdAt', 'ASC');
+    try {
+      const queryBuilder = this.commentRepository
+        .createQueryBuilder('comment')
+        .leftJoinAndSelect('comment.user', 'user')
+        .where('comment.postId = :postId', { postId })
+        .orderBy('comment.createdAt', 'ASC');
 
-    const [list, total] = await queryBuilder
-      .skip((page - 1) * pageSize)
-      .take(pageSize)
-      .getManyAndCount();
+      const [list, total] = await queryBuilder
+        .skip((page - 1) * pageSize)
+        .take(pageSize)
+        .getManyAndCount();
 
-    const transformedList = list.map(comment => ({
-      ...comment,
-      user: {
-        id: comment.user.id,
-        nickname: comment.user.nickname,
-        avatarUrl: comment.user.avatarUrl,
-      },
-    }));
+      const transformedList = list.map((comment) => ({
+        ...comment,
+        user: comment.user
+          ? {
+              id: comment.user.id,
+              nickname: comment.user.nickname,
+              avatarUrl: comment.user.avatarUrl,
+            }
+          : null,
+      }));
 
-    return { list: transformedList, total, page, pageSize };
+      return { list: transformedList, total, page, pageSize };
+    } catch (error) {
+      console.error('getComments error:', error);
+      throw error;
+    }
   }
 
   async toggleLike(userId: number, dto: LikeDto) {
@@ -154,7 +186,11 @@ export class SquareService {
       await this.likeRepository.remove(existing);
 
       if (dto.targetType === TargetType.POST) {
-        await this.postRepository.decrement({ id: dto.targetId }, 'likeCount', 1);
+        await this.postRepository.decrement(
+          { id: dto.targetId },
+          'likeCount',
+          1,
+        );
       }
 
       return { isLiked: false };
@@ -168,11 +204,20 @@ export class SquareService {
       await this.likeRepository.save(like);
 
       if (dto.targetType === TargetType.POST) {
-        await this.postRepository.increment({ id: dto.targetId }, 'likeCount', 1);
+        await this.postRepository.increment(
+          { id: dto.targetId },
+          'likeCount',
+          1,
+        );
       }
 
       // 增加积分
-      await this.pointsService.addPoints(userId, 1, PointsSourceType.LIKE, dto.targetId);
+      await this.pointsService.addPoints(
+        userId,
+        1,
+        PointsSourceType.LIKE,
+        dto.targetId,
+      );
 
       return { isLiked: true, pointsEarned: 1 };
     }

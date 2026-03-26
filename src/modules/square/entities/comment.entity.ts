@@ -15,15 +15,15 @@ export class SquareComment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column()
   @Index()
   postId: number;
 
-  @Column({ type: 'bigint' })
+  @Column()
   @Index()
   userId: number;
 
-  @Column({ type: 'bigint', nullable: true })
+  @Column({ nullable: true })
   @Index()
   parentId: number;
 
