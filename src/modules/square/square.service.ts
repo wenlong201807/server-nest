@@ -126,6 +126,8 @@ export class SquareService {
       postId: dto.postId,
       userId,
       parentId: dto.parentId,
+      replyToId: dto.replyToId,
+      replyToUserId: dto.replyToUserId,
       content: dto.content,
     });
 
@@ -147,15 +149,66 @@ export class SquareService {
 
   async getComments(postId: number, page: number = 1, pageSize: number = 20) {
     try {
+      const validPage = isNaN(page) || page < 1 ? 1 : page;
+      const validPageSize = isNaN(pageSize) || pageSize < 1 ? 20 : pageSize;
+
       const queryBuilder = this.commentRepository
         .createQueryBuilder('comment')
         .leftJoinAndSelect('comment.user', 'user')
         .where('comment.postId = :postId', { postId })
+        .andWhere('comment.parentId IS NULL')
+        .orderBy('comment.createdAt', 'DESC');
+
+      const [list, total] = await queryBuilder
+        .skip((validPage - 1) * validPageSize)
+        .take(validPageSize)
+        .getManyAndCount();
+
+      const transformedList = await Promise.all(
+        list.map(async (comment) => {
+          const replyCount = await this.getReplyCount(comment.id);
+          return {
+            ...comment,
+            user: comment.user
+              ? {
+                  id: comment.user.id,
+                  nickname: comment.user.nickname,
+                  avatarUrl: comment.user.avatarUrl,
+                }
+              : null,
+            replyCount,
+            replies: [],
+          };
+        }),
+      );
+
+      return {
+        list: transformedList,
+        total,
+        page: validPage,
+        pageSize: validPageSize,
+      };
+    } catch (error) {
+      console.error('getComments error:', error);
+      throw error;
+    }
+  }
+
+  async getReplies(commentId: number, page: number = 1, pageSize: number = 5) {
+    try {
+      const validPage = isNaN(page) || page < 1 ? 1 : page;
+      const validPageSize = isNaN(pageSize) || pageSize < 1 ? 5 : pageSize;
+
+      const queryBuilder = this.commentRepository
+        .createQueryBuilder('comment')
+        .leftJoinAndSelect('comment.user', 'user')
+        .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
+        .where('comment.parentId = :commentId', { commentId })
         .orderBy('comment.createdAt', 'ASC');
 
       const [list, total] = await queryBuilder
-        .skip((page - 1) * pageSize)
-        .take(pageSize)
+        .skip((validPage - 1) * validPageSize)
+        .take(validPageSize)
         .getManyAndCount();
 
       const transformedList = list.map((comment) => ({
@@ -167,13 +220,30 @@ export class SquareService {
               avatarUrl: comment.user.avatarUrl,
             }
           : null,
+        replyToUser: comment.replyToUser
+          ? {
+              id: comment.replyToUser.id,
+              nickname: comment.replyToUser.nickname,
+            }
+          : null,
       }));
 
-      return { list: transformedList, total, page, pageSize };
+      return {
+        list: transformedList,
+        total,
+        page: validPage,
+        pageSize: validPageSize,
+      };
     } catch (error) {
-      console.error('getComments error:', error);
+      console.error('getReplies error:', error);
       throw error;
     }
+  }
+
+  private async getReplyCount(commentId: number): Promise<number> {
+    return this.commentRepository.count({
+      where: { parentId: commentId },
+    });
   }
 
   async toggleLike(userId: number, dto: LikeDto) {
@@ -210,7 +280,8 @@ export class SquareService {
           1,
         );
       }
-
+      // // cd /Users/zhuwenlong/Desktop/ai-study/two-join/server-nest
+      // mysql -h localhost -P 3306 -u root -p123456 wetogether < docs/migrations/add_comment_reply_fields.sql
       // 增加积分
       await this.pointsService.addPoints(
         userId,

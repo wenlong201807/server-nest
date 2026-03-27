@@ -33,6 +33,16 @@ export class CreateCommentDto {
   @IsOptional()
   parentId?: number;
 
+  @ApiProperty({ description: '被回复的评论ID' })
+  @IsNumber()
+  @IsOptional()
+  replyToId?: number;
+
+  @ApiProperty({ description: '被回复的用户ID' })
+  @IsNumber()
+  @IsOptional()
+  replyToUserId?: number;
+
   @ApiProperty({ description: '评论内容' })
   @IsString()
   @IsNotEmpty()

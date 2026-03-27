@@ -86,6 +86,22 @@ export class SquareController {
     return this.squareService.createComment(userId, dto);
   }
 
+  @Get('comments/:id/replies')
+  @ApiOperation({ summary: '获取子评论' })
+  async getReplies(
+    @Param('id') commentId: string,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '5',
+  ) {
+    const numPage = parseInt(page, 10) || 1;
+    const numPageSize = parseInt(pageSize, 10) || 5;
+    return this.squareService.getReplies(
+      parseInt(commentId, 10),
+      numPage,
+      numPageSize,
+    );
+  }
+
   @Post('like')
   @ApiOperation({ summary: '点赞/取消点赞' })
   async toggleLike(@CurrentUser('sub') userId: number, @Body() dto: LikeDto) {

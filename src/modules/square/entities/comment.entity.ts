@@ -27,6 +27,14 @@ export class SquareComment {
   @Index()
   parentId: number;
 
+  @Column({ nullable: true })
+  @Index()
+  replyToId: number;
+
+  @Column({ nullable: true })
+  @Index()
+  replyToUserId: number;
+
   @Column({ type: 'text' })
   content: string;
 
@@ -44,4 +52,12 @@ export class SquareComment {
   @ManyToOne(() => SquareComment, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parentId' })
   parent: SquareComment;
+
+  @ManyToOne(() => SquareComment, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'replyToId' })
+  replyTo: SquareComment;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'replyToUserId' })
+  replyToUser: User;
 }
