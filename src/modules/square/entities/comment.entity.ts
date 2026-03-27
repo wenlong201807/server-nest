@@ -35,6 +35,16 @@ export class SquareComment {
   @Index()
   replyToUserId: number;
 
+  @Column({ nullable: true })
+  @Index()
+  rootId: number;
+
+  @Column({ type: 'tinyint', default: 1 })
+  status: number;
+
+  @Column({ type: 'int', default: 0 })
+  replyCount: number;
+
   @Column({ type: 'text' })
   content: string;
 

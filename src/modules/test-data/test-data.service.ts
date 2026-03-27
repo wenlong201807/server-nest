@@ -3,10 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { SquarePost } from '../square/entities/post.entity';
+import { SquareComment } from '../square/entities/comment.entity';
+import { SquareLike } from '../square/entities/like.entity';
 import { Certification } from '../certification/entities/certification.entity';
 import { PointsLog } from '../points/entities/points-log.entity';
 import { PostReport } from '../square/entities/report.entity';
-import { PointsType, PointsSourceType, CertificationStatus, CertificationType } from '@common/constants';
+import { Friendship } from '../friend/entities/friendship.entity';
+import { ChatMessage } from '../chat/entities/message.entity';
+import { PointsType, PointsSourceType, CertificationStatus, CertificationType, FriendStatus } from '@common/constants';
 import * as bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
 
@@ -17,12 +21,20 @@ export class TestDataService implements OnModuleInit {
     private userRepository: Repository<User>,
     @InjectRepository(SquarePost)
     private postRepository: Repository<SquarePost>,
+    @InjectRepository(SquareComment)
+    private commentRepository: Repository<SquareComment>,
+    @InjectRepository(SquareLike)
+    private likeRepository: Repository<SquareLike>,
     @InjectRepository(Certification)
     private certificationRepository: Repository<Certification>,
     @InjectRepository(PointsLog)
     private pointsLogRepository: Repository<PointsLog>,
     @InjectRepository(PostReport)
     private reportRepository: Repository<PostReport>,
+    @InjectRepository(Friendship)
+    private friendshipRepository: Repository<Friendship>,
+    @InjectRepository(ChatMessage)
+    private messageRepository: Repository<ChatMessage>,
   ) {}
 
   async onModuleInit() {
@@ -44,6 +56,18 @@ export class TestDataService implements OnModuleInit {
     
     // Create test posts
     await this.createPosts(users);
+    
+    // Create test comments
+    await this.createComments(users);
+    
+    // Create test likes
+    await this.createLikes(users);
+    
+    // Create test friendships
+    await this.createFriendships(users);
+    
+    // Create test chat messages
+    await this.createChatMessages(users);
     
     // Create test certifications
     await this.createCertifications(users);
@@ -163,6 +187,156 @@ export class TestDataService implements OnModuleInit {
           status: 0,
         });
       }
+    }
+  }
+
+  private async createComments(users: User[]) {
+    const posts = await this.postRepository.find({ take: 2 });
+    if (posts.length === 0) return;
+
+    const comments = [
+      { postId: posts[0].id, userId: users[1].id, content: '这个帖子很有意思！', parentId: null, replyToId: null },
+      { postId: posts[0].id, userId: users[2].id, content: '同意楼上观点', parentId: null, replyToId: null },
+      { postId: posts[0].id, userId: users[0].id, content: '谢谢大家支持', parentId: null, replyToId: null },
+    ];
+
+    const savedComments = [];
+    for (const c of comments) {
+      const comment = this.commentRepository.create({
+        postId: c.postId,
+        userId: c.userId,
+        content: c.content,
+        parentId: c.parentId,
+        replyToId: c.replyToId,
+        replyToUserId: c.replyToId ? users[0].id : null,
+        rootId: c.parentId,
+        status: 1,
+        replyCount: 0,
+      });
+      const saved = await this.commentRepository.save(comment);
+      savedComments.push(saved);
+    }
+
+    // Create replies (sub-comments)
+    if (savedComments.length > 0) {
+      const replies = [
+        { postId: posts[0].id, userId: users[2].id, content: '回复第一条评论', parentId: savedComments[0].id, replyToId: savedComments[0].id, rootId: savedComments[0].id },
+        { postId: posts[0].id, userId: users[0].id, content: '回复用户C', parentId: savedComments[0].id, replyToId: savedComments[0].id, rootId: savedComments[0].id },
+        { postId: posts[0].id, userId: users[1].id, content: '回复第二条评论', parentId: savedComments[1].id, replyToId: savedComments[1].id, rootId: savedComments[1].id },
+      ];
+
+      for (const r of replies) {
+        const reply = this.commentRepository.create({
+          postId: r.postId,
+          userId: r.userId,
+          content: r.content,
+          parentId: r.parentId,
+          replyToId: r.replyToId,
+          replyToUserId: users[1].id,
+          rootId: r.rootId,
+          status: 1,
+          replyCount: 0,
+        });
+        await this.commentRepository.save(reply);
+      }
+
+      // Update reply counts
+      await this.commentRepository.update(savedComments[0].id, { replyCount: 2 });
+      await this.commentRepository.update(savedComments[1].id, { replyCount: 1 });
+    }
+
+    // Update post comment counts
+    await this.postRepository.update(posts[0].id, { commentCount: 6 });
+  }
+
+  private async createLikes(users: User[]) {
+    const posts = await this.postRepository.find({ take: 2 });
+    const comments = await this.commentRepository.find({ take: 3 });
+
+    const likes = [
+      { userId: users[1].id, targetId: posts[0].id, targetType: 1 },
+      { userId: users[2].id, targetId: posts[0].id, targetType: 1 },
+      { userId: users[0].id, targetId: posts[1].id, targetType: 1 },
+      { userId: users[1].id, targetId: comments[0].id, targetType: 2 },
+    ];
+
+    for (const l of likes) {
+      const like = this.likeRepository.create({
+        userId: l.userId,
+        targetId: l.targetId,
+        targetType: l.targetType,
+      });
+      await this.likeRepository.save(like);
+    }
+
+    // Update like counts
+    if (posts[0]) await this.postRepository.update(posts[0].id, { likeCount: 2 });
+    if (posts[1]) await this.postRepository.update(posts[1].id, { likeCount: 1 });
+  }
+
+  private async createFriendships(users: User[]) {
+    // User A follows User B
+    await this.friendshipRepository.save({
+      userId: users[0].id,
+      friendId: users[1].id,
+      status: FriendStatus.FOLLOWING,
+    });
+
+    // User A follows User C
+    await this.friendshipRepository.save({
+      userId: users[0].id,
+      friendId: users[2].id,
+      status: FriendStatus.FOLLOWING,
+    });
+
+    // User B follows User A
+    await this.friendshipRepository.save({
+      userId: users[1].id,
+      friendId: users[0].id,
+      status: FriendStatus.FOLLOWING,
+    });
+
+    // User C follows User A
+    await this.friendshipRepository.save({
+      userId: users[2].id,
+      friendId: users[0].id,
+      status: FriendStatus.FOLLOWING,
+    });
+
+    // User A unlocks chat with User B (become friends)
+    await this.friendshipRepository.save({
+      userId: users[0].id,
+      friendId: users[1].id,
+      status: FriendStatus.FRIEND,
+    });
+
+    // User B unlocks chat with User A (become friends)
+    await this.friendshipRepository.save({
+      userId: users[1].id,
+      friendId: users[0].id,
+      status: FriendStatus.FRIEND,
+    });
+  }
+
+  private async createChatMessages(users: User[]) {
+    const messages = [
+      { senderId: users[0].id, receiverId: users[1].id, content: '你好，很高兴认识你！', msgType: 1 },
+      { senderId: users[1].id, receiverId: users[0].id, content: '你好！很高兴认识你！', msgType: 1 },
+      { senderId: users[0].id, receiverId: users[1].id, content: '今天天气不错', msgType: 1 },
+      { senderId: users[1].id, receiverId: users[0].id, content: '是啊，适合出去走走', msgType: 1 },
+      { senderId: users[0].id, receiverId: users[2].id, content: '用户C你好', msgType: 1 },
+      { senderId: users[2].id, receiverId: users[0].id, content: '用户A你好！', msgType: 1 },
+    ];
+
+    for (const m of messages) {
+      const message = this.messageRepository.create({
+        senderId: m.senderId,
+        receiverId: m.receiverId,
+        content: m.content,
+        msgType: m.msgType,
+        isRead: false,
+      });
+      await this.messageRepository.save(message);
     }
   }
 }

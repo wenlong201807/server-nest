@@ -122,68 +122,150 @@ export class SquareService {
   }
 
   async createComment(userId: number, dto: CreateCommentDto) {
+    const { postId, content, replyToId, replyToUserId, parentId } = dto;
+
+    // 创建评论
     const comment = this.commentRepository.create({
-      postId: dto.postId,
+      postId,
       userId,
-      parentId: dto.parentId,
-      replyToId: dto.replyToId,
-      replyToUserId: dto.replyToUserId,
-      content: dto.content,
+      content,
+      status: 1, // 默认正常状态
     });
 
-    const saved = await this.commentRepository.save(comment);
+    // 设置父子关系
+    if (replyToId) {
+      comment.replyToId = replyToId;
+      comment.replyToUserId = replyToUserId;
 
-    // 更新帖子评论数
-    await this.postRepository.increment({ id: dto.postId }, 'commentCount', 1);
+      // 查询被回复的评论以确定rootId和parentId
+      const replyToComment = await this.commentRepository.findOne({
+        where: { id: replyToId },
+      });
+
+      if (replyToComment) {
+        comment.rootId = replyToComment.rootId || replyToComment.id;
+        comment.parentId = replyToComment.parentId || replyToComment.id;
+      }
+    } else {
+      // 顶级评论
+      comment.rootId = null;
+      comment.parentId = null;
+    }
+
+    const savedComment = await this.commentRepository.save(comment);
+
+    // 更新回复数统计
+    if (comment.rootId) {
+      // 更新根评论的回复数
+      await this.commentRepository
+        .createQueryBuilder()
+        .update(SquareComment)
+        .set({ replyCount: () => '`replyCount` + 1' })
+        .where('id = :id', { id: comment.rootId })
+        .execute();
+    } else {
+      // 更新帖子的评论数
+      await this.postRepository
+        .createQueryBuilder()
+        .update(SquarePost)
+        .set({ commentCount: () => '`commentCount` + 1' })
+        .where('id = :id', { id: postId })
+        .execute();
+    }
 
     // 增加积分
     await this.pointsService.addPoints(
       userId,
       2,
       PointsSourceType.COMMENT,
-      saved.id,
+      savedComment.id,
     );
 
-    return { id: saved.id, pointsEarned: 2 };
+    return {
+      id: savedComment.id,
+      message: '评论成功',
+    };
   }
 
-  async getComments(postId: number, page: number = 1, pageSize: number = 20) {
+  async getComments(
+    postId: number,
+    page: number = 1,
+    pageSize: number = 20,
+    sort: 'time' | 'hot' | string = 'time',
+  ) {
     try {
       const validPage = isNaN(page) || page < 1 ? 1 : page;
       const validPageSize = isNaN(pageSize) || pageSize < 1 ? 20 : pageSize;
 
-      const queryBuilder = this.commentRepository
+      let queryBuilder = this.commentRepository
         .createQueryBuilder('comment')
         .leftJoinAndSelect('comment.user', 'user')
+        .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
         .where('comment.postId = :postId', { postId })
-        .andWhere('comment.parentId IS NULL')
-        .orderBy('comment.createdAt', 'DESC');
-
-      const [list, total] = await queryBuilder
+        .andWhere('comment.parentId IS NULL') // 只获取顶层评论
+        .andWhere('comment.status = 1') // 只获取正常状态的评论
         .skip((validPage - 1) * validPageSize)
-        .take(validPageSize)
-        .getManyAndCount();
+        .take(validPageSize);
 
-      const transformedList = await Promise.all(
-        list.map(async (comment) => {
-          const replyCount = await this.getReplyCount(comment.id);
+      // 排序
+      if (sort === 'hot') {
+        queryBuilder = queryBuilder
+          .orderBy('comment.likeCount', 'DESC')
+          .addOrderBy('comment.createdAt', 'DESC');
+      } else {
+        queryBuilder = queryBuilder.orderBy('comment.createdAt', 'DESC');
+      }
+
+      const [comments, total] = await queryBuilder.getManyAndCount();
+
+      // 获取每个顶层评论的回复（最多5条）
+      const commentsWithReplies = await Promise.all(
+        comments.map(async (comment) => {
+          const replies = await this.commentRepository
+            .createQueryBuilder('comment')
+            .leftJoinAndSelect('comment.user', 'user')
+            .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
+            .where('comment.rootId = :rootId', { rootId: comment.id })
+            .andWhere('comment.parentId IS NOT NULL') // 不包括自己
+            .andWhere('comment.status = 1')
+            .orderBy('comment.likeCount', 'DESC')
+            .addOrderBy('comment.createdAt', 'ASC')
+            .limit(5) // 最多获取5条回复
+            .getMany();
+
           return {
             ...comment,
-            user: comment.user
+            user: {
+              id: comment.user.id,
+              nickname: comment.user.nickname,
+              avatarUrl: comment.user.avatarUrl,
+            },
+            replyToUser: comment.replyToUser
               ? {
-                  id: comment.user.id,
-                  nickname: comment.user.nickname,
-                  avatarUrl: comment.user.avatarUrl,
+                  id: comment.replyToUser.id,
+                  nickname: comment.replyToUser.nickname,
                 }
               : null,
-            replyCount,
-            replies: [],
+            replies: replies.map((reply) => ({
+              ...reply,
+              user: {
+                id: reply.user.id,
+                nickname: reply.user.nickname,
+                avatarUrl: reply.user.avatarUrl,
+              },
+              replyToUser: reply.replyToUser
+                ? {
+                    id: reply.replyToUser.id,
+                    nickname: reply.replyToUser.nickname,
+                  }
+                : null,
+            })),
           };
         }),
       );
 
       return {
-        list: transformedList,
+        list: commentsWithReplies,
         total,
         page: validPage,
         pageSize: validPageSize,
@@ -194,32 +276,32 @@ export class SquareService {
     }
   }
 
-  async getReplies(commentId: number, page: number = 1, pageSize: number = 5) {
+  async getReplies(commentId: number, page: number = 1, pageSize: number = 20) {
     try {
       const validPage = isNaN(page) || page < 1 ? 1 : page;
-      const validPageSize = isNaN(pageSize) || pageSize < 1 ? 5 : pageSize;
+      const validPageSize = isNaN(pageSize) || pageSize < 1 ? 20 : pageSize;
 
       const queryBuilder = this.commentRepository
         .createQueryBuilder('comment')
         .leftJoinAndSelect('comment.user', 'user')
         .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
-        .where('comment.parentId = :commentId', { commentId })
-        .orderBy('comment.createdAt', 'ASC');
-
-      const [list, total] = await queryBuilder
+        .where('comment.rootId = :commentId', { commentId })
+        .andWhere('comment.parentId IS NOT NULL') // 不包括根评论本身
+        .andWhere('comment.status = 1')
+        .orderBy('comment.likeCount', 'DESC')
+        .addOrderBy('comment.createdAt', 'ASC')
         .skip((validPage - 1) * validPageSize)
-        .take(validPageSize)
-        .getManyAndCount();
+        .take(validPageSize);
+
+      const [list, total] = await queryBuilder.getManyAndCount();
 
       const transformedList = list.map((comment) => ({
         ...comment,
-        user: comment.user
-          ? {
-              id: comment.user.id,
-              nickname: comment.user.nickname,
-              avatarUrl: comment.user.avatarUrl,
-            }
-          : null,
+        user: {
+          id: comment.user.id,
+          nickname: comment.user.nickname,
+          avatarUrl: comment.user.avatarUrl,
+        },
         replyToUser: comment.replyToUser
           ? {
               id: comment.replyToUser.id,
@@ -280,8 +362,7 @@ export class SquareService {
           1,
         );
       }
-      // // cd /Users/zhuwenlong/Desktop/ai-study/two-join/server-nest
-      // mysql -h localhost -P 3306 -u root -p123456 wetogether < docs/migrations/add_comment_reply_fields.sql
+
       // 增加积分
       await this.pointsService.addPoints(
         userId,

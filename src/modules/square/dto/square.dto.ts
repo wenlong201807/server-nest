@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -9,6 +9,29 @@ import {
   IsNumber,
 } from 'class-validator';
 import { TargetType, ReportReason } from '@common/constants';
+
+export class GetCommentsDto {
+  @ApiProperty({ description: '页码', required: false, default: 1 })
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  @IsOptional()
+  page?: number = 1;
+
+  @ApiProperty({ description: '每页数量', required: false, default: 20 })
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  @IsOptional()
+  pageSize?: number = 20;
+
+  @ApiProperty({
+    description: '排序方式：time-时间倒序，hot-热度',
+    required: false,
+    default: 'time',
+  })
+  @IsString()
+  @IsOptional()
+  sort?: 'time' | 'hot' = 'time';
+}
 
 export class CreatePostDto {
   @ApiProperty({ description: '帖子内容' })

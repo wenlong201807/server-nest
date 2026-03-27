@@ -54,11 +54,13 @@ export class SquareController {
     @Param('id') postId: string,
     @Query('page') page: string = '1',
     @Query('pageSize') pageSize: string = '20',
+    @Query('sort') sort: 'time' | 'hot' = 'time',
   ) {
     return this.squareService.getComments(
       parseInt(postId, 10),
       parseInt(page, 10),
       parseInt(pageSize, 10),
+      sort,
     );
   }
 
