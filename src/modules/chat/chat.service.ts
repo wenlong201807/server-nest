@@ -62,6 +62,22 @@ export class ChatService {
         content: dto.content,
         msgType: dto.msgType || MsgType.TEXT,
         isRead: false,
+        isSelf: false,
+        createdAt: saved.createdAt,
+      },
+    });
+
+    // 同时推送给自己，确认消息已发送
+    this.wsGateway.sendMessage(userId, {
+      type: 'message',
+      data: {
+        id: saved.id,
+        senderId: userId,
+        receiverId: dto.receiverId,
+        content: dto.content,
+        msgType: dto.msgType || MsgType.TEXT,
+        isRead: true,
+        isSelf: true,
         createdAt: saved.createdAt,
       },
     });

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Server } from 'socket.io';
 import { ChatGateway } from './chat.gateway';
 
 @Injectable()
@@ -11,17 +10,25 @@ export class WebSocketGatewayService {
   }
 
   sendMessage(userId: number, message: any) {
-    const server = this.gateway.server;
-    if (!server) return;
-
-    // 发送给指定用户的所有Socket
-    server.to(`user:${userId}`).emit('message', message);
+    if (!this.gateway) {
+      console.error('Gateway not initialized');
+      return;
+    }
+    this.gateway.sendMessage(userId, message);
   }
 
-  broadcastMessage(event: string, message: any) {
-    const server = this.gateway.server;
-    if (!server) return;
-
-    server.emit(event, message);
+  broadcastMessage(message: any) {
+    if (!this.gateway) {
+      console.error('Gateway not initialized');
+      return;
+    }
+    // 广播给所有连接的用户
+    this.gateway.server.clients.forEach((client: any) => {
+      try {
+        client.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Broadcast error:', error);
+      }
+    });
   }
 }

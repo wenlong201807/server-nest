@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { FriendService } from './friend.service';
 import { CurrentUser } from '../../common/decorators/user.decorator';
@@ -21,6 +21,15 @@ export class FriendController {
   @ApiOperation({ summary: '获取关注列表' })
   async getFollowingList(@CurrentUser('sub') userId: number) {
     return this.friendService.getFollowingList(userId);
+  }
+
+  @Get('status/:userId')
+  @ApiOperation({ summary: '获取好友状态' })
+  async getFriendshipStatus(
+    @CurrentUser('sub') userId: number,
+    @Param('userId') targetId: number,
+  ) {
+    return this.friendService.getFriendshipStatus(userId, targetId);
   }
 
   @Post('follow')

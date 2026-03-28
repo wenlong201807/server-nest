@@ -180,6 +180,29 @@ export class FriendService {
     return !!friendship;
   }
 
+  async getFriendshipStatus(userId: number, targetId: number) {
+    const friendship = await this.friendshipRepository.findOne({
+      where: { userId, friendId: targetId },
+    });
+
+    const user = await this.userService.findById(userId);
+    const requiredPoints = 50;
+
+    const isFriend = friendship?.status === FriendStatus.FRIEND;
+    const isFollowing = !!friendship;
+    const chatCount = friendship?.chatCount || 0;
+    const canChat = isFriend || (isFollowing && chatCount >= 8 && user.points >= requiredPoints);
+
+    return {
+      isFriend,
+      isFollowing,
+      canChat,
+      chatCount,
+      requiredPoints,
+      currentPoints: user.points,
+    };
+  }
+
   async updateChatCount(userId: number, friendId: number) {
     const friendship = await this.friendshipRepository.findOne({
       where: { userId, friendId },

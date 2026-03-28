@@ -4,78 +4,108 @@ import {
   SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Server, WebSocket } from 'ws';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WebSocketGatewayService } from './websocket-gateway.service';
-import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
   path: '/ws',
-  namespace: '/',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private logger = new Logger('ChatGateway');
-  private userSocketMap = new Map<number, Set<string>>();
+  private userSocketMap = new Map<number, Set<WebSocket>>();
 
   constructor(
     private jwtService: JwtService,
-    private configService: ConfigService,
     private wsService: WebSocketGatewayService,
   ) {
     this.wsService.setGateway(this);
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(client: WebSocket, req: any) {
     try {
-      const token = client.handshake.auth.token || client.handshake.query.token;
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const token = url.searchParams.get('token');
+
+      this.logger.log(`Connection attempt, token: ${token ? 'present' : 'missing'}`);
 
       if (!token) {
-        client.disconnect();
+        client.close();
         return;
       }
 
       const payload = this.jwtService.verify(token);
       const userId = payload.sub;
 
-      client.data.userId = userId;
+      (client as any).userId = userId;
 
-      // 存储用户Socket映射
       if (!this.userSocketMap.has(userId)) {
         this.userSocketMap.set(userId, new Set());
       }
-      this.userSocketMap.get(userId).add(client.id);
+      this.userSocketMap.get(userId).add(client);
 
-      this.logger.log(`User ${userId} connected, socket: ${client.id}`);
+      this.logger.log(`User ${userId} connected`);
+
+      client.on('message', (data: Buffer) => {
+        try {
+          const message = JSON.parse(data.toString());
+          this.handleMessage(client, message);
+        } catch (error) {
+          this.logger.error('Parse message error:', error);
+        }
+      });
+
+      client.on('close', () => {
+        this.handleDisconnect(client);
+      });
+
+      // 发送连接成功消息
+      client.send(JSON.stringify({ type: 'connected', data: { userId } }));
     } catch (error) {
       this.logger.error('Connection error:', error);
-      client.disconnect();
+      client.close();
     }
   }
 
-  handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
+  handleDisconnect(client: WebSocket) {
+    const userId = (client as any).userId;
     if (userId) {
       const sockets = this.userSocketMap.get(userId);
       if (sockets) {
-        sockets.delete(client.id);
+        sockets.delete(client);
         if (sockets.size === 0) {
           this.userSocketMap.delete(userId);
         }
       }
-      this.logger.log(`User ${userId} disconnected, socket: ${client.id}`);
+      this.logger.log(`User ${userId} disconnected`);
     }
   }
 
-  @SubscribeMessage('ping')
-  handlePing(@ConnectedSocket() client: Socket) {
-    client.emit('pong', { timestamp: Date.now() });
+  private handleMessage(client: WebSocket, message: any) {
+    const userId = (client as any).userId;
+    
+    if (message.type === 'ping') {
+      client.send(JSON.stringify({ type: 'pong', data: { timestamp: Date.now() } }));
+    }
+  }
+
+  sendMessage(userId: number, message: any) {
+    const sockets = this.userSocketMap.get(userId);
+    if (sockets) {
+      const data = JSON.stringify(message);
+      sockets.forEach(socket => {
+        try {
+          socket.send(data);
+        } catch (error) {
+          this.logger.error(`Send message to user ${userId} error:`, error);
+        }
+      });
+    }
   }
 }

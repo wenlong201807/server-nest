@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber } from 'class-validator';
 import { MsgType } from '@common/constants';
 
 export class SendMessageDto {
   @ApiProperty({ description: '接收者ID' })
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
   receiverId: number;
 

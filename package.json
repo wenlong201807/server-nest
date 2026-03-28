@@ -36,6 +36,7 @@
     "@nestjs/throttler": "^5.1.1",
     "@nestjs/typeorm": "^10.0.1",
     "@nestjs/websockets": "^10.3.0",
+    "@types/ws": "^8.18.1",
     "bcrypt": "^5.1.1",
     "cache-manager": "^5.2.4",
     "cache-manager-redis-store": "^3.0.1",
@@ -51,7 +52,8 @@
     "reflect-metadata": "^0.1.14",
     "rxjs": "^7.8.1",
     "socket.io": "^4.6.1",
-    "typeorm": "^0.3.19"
+    "typeorm": "^0.3.19",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",
