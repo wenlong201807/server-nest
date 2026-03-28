@@ -20,6 +20,7 @@ import { PointsConfigModule } from './modules/points-config/points-config.module
 import { CertificationTypeModule } from './modules/certification-type/certification-type.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { TestDataModule } from './modules/test-data/test-data.module';
+import { FileModule } from './modules/file/file.module';
 import { CommonModule } from './common/common.module';
 import { WebSocketModule } from './modules/websocket/websocket.module';
 
@@ -45,6 +46,7 @@ import { SystemConfig } from './modules/system-config/system-config.entity';
 import { UserViolation } from './modules/user-violation/user-violation.entity';
 import { PointsConfig } from './modules/points-config/entities/points-config.entity';
 import { CertificationType } from './modules/certification-type/entities/certification-type.entity';
+import { FileRecord } from './modules/file/entities/file-record.entity';
 
 @Module({
   imports: [
@@ -81,6 +83,7 @@ import { CertificationType } from './modules/certification-type/entities/certifi
           UserViolation,
           PointsConfig,
           CertificationType,
+          FileRecord,
         ],
         synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
         logging: configService.get('NODE_ENV') === 'development',
@@ -119,6 +122,7 @@ import { CertificationType } from './modules/certification-type/entities/certifi
     CertificationTypeModule,
     SystemConfigModule,
     TestDataModule,
+    FileModule,
     WebSocketModule,
   ],
   controllers: [],
