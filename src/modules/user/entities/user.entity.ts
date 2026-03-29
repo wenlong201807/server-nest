@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarPath: string;
+
   @Column({ type: 'tinyint', default: Gender.UNKNOWN })
   gender: Gender;
 

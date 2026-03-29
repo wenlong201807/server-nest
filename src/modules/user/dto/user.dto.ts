@@ -13,6 +13,11 @@ export class UpdateUserDto {
   @IsOptional()
   avatarUrl?: string;
 
+  @ApiProperty({ description: '头像相对路径', required: false })
+  @IsString()
+  @IsOptional()
+  avatarPath?: string;
+
   @ApiProperty({ description: '性别', enum: Gender, required: false })
   @IsEnum(Gender)
   @IsOptional()

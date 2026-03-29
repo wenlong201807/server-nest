@@ -26,6 +26,18 @@ export class FileController {
     return this.fileService.getConfig();
   }
 
+  @Post('presigned-put')
+  async getPresignedPutUrl(
+    @Body() body: { filePath: string },
+  ) {
+    const uploadUrl = await this.fileService.generatePresignedPutUrl(body.filePath);
+    return {
+      uploadUrl,
+      filePath: body.filePath,
+      expiresIn: 3600,
+    };
+  }
+
   @Post('upload')
   async upload(
     @Body() body: {
@@ -55,6 +67,8 @@ export class FileController {
       status: 1,
     });
 
+    const url = await this.fileService.generatePresignedUrl(file.filePath);
+
     return {
       id: file.id,
       fileName: file.fileName,
@@ -65,7 +79,7 @@ export class FileController {
       fileExt: file.fileExt,
       width: file.width,
       height: file.height,
-      url: this.fileService.getFileUrl(file.filePath),
+      url,
     };
   }
 

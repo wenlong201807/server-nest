@@ -221,25 +221,29 @@ export class SquareService {
       // 获取每个顶层评论的回复（最多5条）
       const commentsWithReplies = await Promise.all(
         comments.map(async (comment) => {
-          const replies = await this.commentRepository
-            .createQueryBuilder('comment')
-            .leftJoinAndSelect('comment.user', 'user')
-            .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
-            .where('comment.rootId = :rootId', { rootId: comment.id })
-            .andWhere('comment.parentId IS NOT NULL') // 不包括自己
-            .andWhere('comment.status = 1')
-            .orderBy('comment.likeCount', 'DESC')
-            .addOrderBy('comment.createdAt', 'ASC')
-            .limit(5) // 最多获取5条回复
-            .getMany();
+          let replies: any[] = [];
+          
+          // 只有当rootId存在时才查询回复
+          if (comment.rootId) {
+            replies = await this.commentRepository
+              .createQueryBuilder('comment')
+              .leftJoinAndSelect('comment.user', 'user')
+              .leftJoinAndSelect('comment.replyToUser', 'replyToUser')
+              .where('comment.rootId = :rootId', { rootId: comment.id })
+              .andWhere('comment.parentId IS NOT NULL') // 不包括自己
+              .andWhere('comment.status = 1')
+              .orderBy('comment.createdAt', 'ASC')
+              .limit(5) // 最多获取5条回复
+              .getMany();
+          }
 
           return {
             ...comment,
-            user: {
+            user: comment.user ? {
               id: comment.user.id,
               nickname: comment.user.nickname,
               avatarUrl: comment.user.avatarUrl,
-            },
+            } : null,
             replyToUser: comment.replyToUser
               ? {
                   id: comment.replyToUser.id,
@@ -248,11 +252,11 @@ export class SquareService {
               : null,
             replies: replies.map((reply) => ({
               ...reply,
-              user: {
+              user: reply.user ? {
                 id: reply.user.id,
                 nickname: reply.user.nickname,
                 avatarUrl: reply.user.avatarUrl,
-              },
+              } : null,
               replyToUser: reply.replyToUser
                 ? {
                     id: reply.replyToUser.id,
@@ -288,8 +292,7 @@ export class SquareService {
         .where('comment.rootId = :commentId', { commentId })
         .andWhere('comment.parentId IS NOT NULL') // 不包括根评论本身
         .andWhere('comment.status = 1')
-        .orderBy('comment.likeCount', 'DESC')
-        .addOrderBy('comment.createdAt', 'ASC')
+        .orderBy('comment.createdAt', 'ASC')
         .skip((validPage - 1) * validPageSize)
         .take(validPageSize);
 
@@ -297,11 +300,11 @@ export class SquareService {
 
       const transformedList = list.map((comment) => ({
         ...comment,
-        user: {
+        user: comment.user ? {
           id: comment.user.id,
           nickname: comment.user.nickname,
           avatarUrl: comment.user.avatarUrl,
-        },
+        } : null,
         replyToUser: comment.replyToUser
           ? {
               id: comment.replyToUser.id,

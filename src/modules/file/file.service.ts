@@ -3,17 +3,42 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, In } from 'typeorm';
 import { FileRecord, FileStatus } from './entities/file-record.entity';
 import { ConfigService } from '@nestjs/config';
+import { Client } from 'minio';
 
 @Injectable()
 export class FileService {
-  private rustfsBaseUrl: string;
+  private rustfsDomain: string;
+  private rustfsAccessKey: string;
+  private rustfsSecretKey: string;
+  private rustfsBucket: string;
+  private minioClient: Client;
 
   constructor(
     @InjectRepository(FileRecord)
     private fileRepository: Repository<FileRecord>,
     private configService: ConfigService,
   ) {
-    this.rustfsBaseUrl = this.configService.get('RUSTFS_BASE_URL') || 'http://localhost:9000/files';
+    this.rustfsDomain =
+      this.configService.get('RUSTFS_DOMAIN') || 'http://localhost:9002';
+    this.rustfsAccessKey =
+      this.configService.get('RUSTFS_ACCESS_KEY') || 'rustfsadmin';
+    this.rustfsSecretKey =
+      this.configService.get('RUSTFS_SECRET_KEY') || 'rustfsadmin';
+    this.rustfsBucket = this.configService.get('RUSTFS_BUCKET') || 'test-one';
+    console.log(
+      'zwl-->> RustFS配置:',
+      this.rustfsBucket,
+      this.rustfsAccessKey,
+      this.rustfsSecretKey,
+    );
+
+    this.minioClient = new Client({
+      endPoint: 'localhost',
+      port: 9002,
+      useSSL: false,
+      accessKey: 'rustfsadmin',
+      secretKey: 'rustfsadmin',
+    });
   }
 
   async create(fileData: Partial<FileRecord>): Promise<FileRecord> {
@@ -112,12 +137,43 @@ export class FileService {
   }
 
   getFileUrl(filePath: string): string {
-    return `${this.rustfsBaseUrl}/${filePath}`;
+    return `${this.rustfsDomain}/${this.rustfsBucket}/${filePath}`;
   }
 
   async getFileUrlById(id: number): Promise<string> {
     const file = await this.findById(id);
-    return this.getFileUrl(file.filePath);
+    if (file.status === FileStatus.BLOCKED) {
+      return null;
+    }
+    return this.generatePresignedUrl(file.filePath);
+  }
+
+  async generatePresignedUrl(filePath: string): Promise<string> {
+    try {
+      const url = await this.minioClient.presignedGetObject(
+        this.rustfsBucket,
+        filePath,
+        60 * 60 * 24 * 7,
+      );
+      return url;
+    } catch (error) {
+      console.error('Failed to generate presigned URL:', error);
+      return this.getFileUrl(filePath);
+    }
+  }
+
+  async generatePresignedPutUrl(filePath: string): Promise<string> {
+    try {
+      const url = await this.minioClient.presignedPutObject(
+        this.rustfsBucket,
+        filePath,
+        60 * 60 * 24 * 7, // 7 days
+      );
+      return url;
+    } catch (error) {
+      console.error('Failed to generate presigned PUT URL:', error);
+      throw error;
+    }
   }
 
   async isBlocked(filePath: string): Promise<boolean> {
@@ -137,10 +193,13 @@ export class FileService {
 
   async getConfig() {
     return {
-      baseUrl: this.rustfsBaseUrl,
-      bucket: 'default',
+      baseUrl: `${this.rustfsDomain}/${this.rustfsBucket}`,
+      bucket: this.rustfsBucket,
       maxSize: 10 * 1024 * 1024,
       allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      accessKeyId: this.rustfsAccessKey,
+      secretAccessKey: this.rustfsSecretKey,
+      endpoint: this.rustfsDomain,
     };
   }
 }
