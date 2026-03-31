@@ -11,7 +11,7 @@ export const dataSourceOptions: DataSourceOptions = {
   entities: ['src/**/*.entity{.ts,.js}'],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: true,
-  logging: process.env.NODE_ENV === 'development',
+  logging: process.env.NODE_ENV === 'dev',
   timezone: '+08:00',
   charset: 'utf8mb4',
 };
