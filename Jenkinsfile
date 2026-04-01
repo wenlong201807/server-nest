@@ -42,6 +42,11 @@ pipeline {
                     if ! command -v pm2 >/dev/null 2>&1; then
                         npm install -g pm2
                     fi
+
+                    if ! command -v mysql >/dev/null 2>&1; then
+                        apt-get update -qq && apt-get install -y -qq default-mysql-client
+                    fi
+
                     pnpm install --frozen-lockfile
                 '''
             }
@@ -80,7 +85,7 @@ pipeline {
             steps {
                 sh """
                     chmod +x scripts/init-database.sh
-                    bash scripts/init-database.sh ${params.ENVIRONMENT} host.docker.internal root root123
+                    bash scripts/init-database.sh ${params.ENVIRONMENT} 127.0.0.1 root root123
                 """
             }
         }
