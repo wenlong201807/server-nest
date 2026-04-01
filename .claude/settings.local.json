@@ -33,7 +33,8 @@
       "Bash(grep \"^\\\\.env$\")",
       "Bash(git rm:*)",
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(pm2 restart:*)"
     ]
   }
 }
