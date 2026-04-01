@@ -17,12 +17,18 @@ pipeline {
     }
 
     stages {
+        stage('清理工作空间') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('拉取代码') {
             steps {
                 script {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "${BRANCH}"]],
+                        branches: [[name: "${params.BRANCH}"]],
                         extensions: [[$class: 'CloneOption', depth: 1, shallow: true]],
                         userRemoteConfigs: [[
                             url: "https://github.com/wenlong201807/server-nest.git",
@@ -48,7 +54,11 @@ pipeline {
                         apt-get update -qq && apt-get install -y -qq default-mysql-client
                     fi
 
+                    # 安装依赖
                     pnpm install --frozen-lockfile
+
+                    # 重新编译原生模块（bcrypt 等）
+                    pnpm rebuild
                 '''
             }
         }
