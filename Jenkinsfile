@@ -54,25 +54,8 @@ pipeline {
                         apt-get update -qq && apt-get install -y -qq default-mysql-client
                     fi
 
-                    # 安装 Python 和构建工具（bcrypt 编译需要）
-                    apt-get update -qq && apt-get install -y -qq python3 make g++ || true
-
-                    # 安装依赖
+                    # 安装依赖（使用 bcryptjs，无需编译）
                     pnpm install --frozen-lockfile
-
-                    # 强制重新安装 bcrypt
-                    echo "强制安装 bcrypt 原生模块..."
-                    cd node_modules/.pnpm/bcrypt@5.1.1/node_modules/bcrypt
-                    npm run install || node-pre-gyp install --fallback-to-build
-                    cd -
-
-                    # 验证 bcrypt 安装
-                    if [ -f "node_modules/.pnpm/bcrypt@5.1.1/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node" ]; then
-                        echo "✅ bcrypt 原生模块安装成功"
-                    else
-                        echo "❌ bcrypt 原生模块安装失败"
-                        exit 1
-                    fi
                 '''
             }
         }

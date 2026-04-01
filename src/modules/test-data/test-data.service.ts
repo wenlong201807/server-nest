@@ -11,7 +11,7 @@ import { PostReport } from '../square/entities/report.entity';
 import { Friendship } from '../friend/entities/friendship.entity';
 import { ChatMessage } from '../chat/entities/message.entity';
 import { PointsType, PointsSourceType, CertificationStatus, CertificationType, FriendStatus } from '@common/constants';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 
 @Injectable()
