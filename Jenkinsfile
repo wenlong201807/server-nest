@@ -76,6 +76,15 @@ pipeline {
             }
         }
 
+        stage('数据库初始化') {
+            steps {
+                sh """
+                    chmod +x scripts/init-database.sh
+                    bash scripts/init-database.sh ${params.ENVIRONMENT} host.docker.internal root root123
+                """
+            }
+        }
+
         stage('停止旧服务') {
             steps {
                 sh "pm2 delete ${PROJECT_NAME}-${params.ENVIRONMENT} || true"
