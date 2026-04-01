@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker exec jenkins:*)"
+      "Bash(docker exec jenkins:*)",
+      "Bash(docker exec:*)",
+      "Bash(chmod +x:*)",
+      "Bash(bash:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mysql -hlocalhost -P3308 -uroot -proot123 -e \"SELECT 1;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT 1;\")"
     ]
   }
 }
