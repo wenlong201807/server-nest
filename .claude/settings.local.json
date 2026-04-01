@@ -37,7 +37,12 @@
       "Bash(pm2 restart:*)",
       "Bash(pnpm rebuild:*)",
       "Bash(pnpm install:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm run:*)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(pkill -f \"node dist/main.js\")"
     ]
   }
 }

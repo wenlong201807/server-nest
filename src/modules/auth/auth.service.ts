@@ -6,7 +6,7 @@ import { PointsService } from '../points/points.service';
 import { RegisterDto, LoginDto, SmsDto } from './dto/auth.dto';
 import { RedisService } from '../../common/redis/redis.service';
 import { nanoid } from 'nanoid';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PointsSourceType } from '@common/constants';
 
 @Injectable()
