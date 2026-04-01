@@ -54,11 +54,8 @@ pipeline {
                         apt-get update -qq && apt-get install -y -qq default-mysql-client
                     fi
 
-                    # 安装依赖
+                    # 安装依赖（不跳过脚本，确保 bcrypt 等原生模块正确安装）
                     pnpm install --frozen-lockfile
-
-                    # 重新编译原生模块（bcrypt 等）
-                    pnpm rebuild
                 '''
             }
         }

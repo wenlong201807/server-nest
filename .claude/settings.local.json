@@ -34,7 +34,10 @@
       "Bash(git rm:*)",
       "Bash(ls:*)",
       "Bash(find:*)",
-      "Bash(pm2 restart:*)"
+      "Bash(pm2 restart:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(pnpm install:*)",
+      "Bash(node:*)"
     ]
   }
 }
