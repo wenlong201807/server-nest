@@ -140,7 +140,7 @@ export class FileService {
     return `${this.rustfsDomain}/${this.rustfsBucket}/${filePath}`;
   }
 
-  async getFileUrlById(id: number): Promise<string> {
+  async getFileUrlById(id: number): Promise<string | null> {
     const file = await this.findById(id);
     if (file.status === FileStatus.BLOCKED) {
       return null;

@@ -25,19 +25,19 @@ export class SquareComment {
 
   @Column({ nullable: true })
   @Index()
-  parentId: number;
+  parentId: number | null;
 
   @Column({ nullable: true })
   @Index()
-  replyToId: number;
+  replyToId: number | null;
 
   @Column({ nullable: true })
   @Index()
-  replyToUserId: number;
+  replyToUserId: number | null;
 
   @Column({ nullable: true })
   @Index()
-  rootId: number;
+  rootId: number | null;
 
   @Column({ type: 'tinyint', default: 1 })
   status: number;

@@ -121,6 +121,9 @@ export class FileController {
     @Query('type') type?: string,
     @CurrentUser() user?: JwtPayload,
   ) {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
     const result = await this.fileService.findByUser(
       user.id,
       page,

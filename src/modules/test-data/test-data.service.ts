@@ -200,7 +200,7 @@ export class TestDataService implements OnModuleInit {
       { postId: posts[0].id, userId: users[0].id, content: '谢谢大家支持', parentId: null, replyToId: null },
     ];
 
-    const savedComments = [];
+    const savedComments: SquareComment[] = [];
     for (const c of comments) {
       const comment = this.commentRepository.create({
         postId: c.postId,

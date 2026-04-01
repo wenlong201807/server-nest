@@ -48,7 +48,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!this.userSocketMap.has(userId)) {
         this.userSocketMap.set(userId, new Set());
       }
-      this.userSocketMap.get(userId).add(client);
+      const userSockets = this.userSocketMap.get(userId);
+      if (userSockets) {
+        userSockets.add(client);
+      }
 
       this.logger.log(`User ${userId} connected`);
 

@@ -21,7 +21,17 @@
       "Bash(npm run:*)",
       "Bash(mysql -h127.0.0.1 -P3307 -uroot -proot123 -e \"DROP DATABASE IF EXISTS together_dev; CREATE DATABASE together_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
       "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"DROP DATABASE IF EXISTS together_staging; CREATE DATABASE together_staging CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
-      "Bash(docker network ls:*)"
+      "Bash(docker network ls:*)",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"DESCRIBE together_staging.users;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT COUNT\\(*\\) as cnt FROM together_staging.users;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT COUNT\\(*\\) as cnt FROM together_staging.friendships;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SHOW CREATE TABLE together_staging.users\\\\G\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SHOW CREATE TABLE together_staging.users;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT * FROM together_staging.friendships;\")",
+      "Bash(find /Users/zhuwenlong/Desktop/ai-study/two-join/server-nest/src/modules -name \"*.controller.ts\" -exec basename {} \\\\;)",
+      "Bash(grep \".env$\")",
+      "Bash(grep \"^\\\\.env$\")",
+      "Bash(git rm:*)"
     ]
   }
 }
