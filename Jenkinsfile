@@ -12,6 +12,7 @@ pipeline {
 
     environment {
         PROJECT_NAME = 'server-nest'
+        DEPLOY_ENV = "${params.ENVIRONMENT}"
     }
 
     stages {
@@ -77,82 +78,80 @@ pipeline {
 
         stage('停止旧服务') {
             steps {
-                sh 'pm2 delete ${PROJECT_NAME}-${params.ENVIRONMENT} || true'
+                sh "pm2 delete ${PROJECT_NAME}-${params.ENVIRONMENT} || true"
             }
         }
 
         stage('启动服务') {
             steps {
-                sh '''
-                    set -a
-                    export NODE_ENV=$ENVIRONMENT
-                    case $ENVIRONMENT in
-                        dev)
-                            export PORT=8118
-                            export DB_HOST=host.docker.internal
-                            export DB_PORT=3307
-                            export DB_USERNAME=root
-                            export DB_PASSWORD=root123
-                            export DB_DATABASE=together_dev
-                            export REDIS_HOST=host.docker.internal
-                            export REDIS_PORT=6383
-                            export REDIS_PASSWORD=
-                            export RUSTFS_URL=http://host.docker.internal:8121
-                            ;;
-                        staging)
-                            export PORT=8119
-                            export DB_HOST=host.docker.internal
-                            export DB_PORT=3308
-                            export DB_USERNAME=root
-                            export DB_PASSWORD=root123
-                            export DB_DATABASE=together_staging
-                            export REDIS_HOST=host.docker.internal
-                            export REDIS_PORT=6384
-                            export REDIS_PASSWORD=
-                            export RUSTFS_URL=http://host.docker.internal:8122
-                            ;;
-                        prod)
-                            export PORT=8120
-                            export DB_HOST=host.docker.internal
-                            export DB_PORT=3309
-                            export DB_USERNAME=root
-                            export DB_PASSWORD=root123
-                            export DB_DATABASE=together_prod
-                            export REDIS_HOST=host.docker.internal
-                            export REDIS_PORT=6382
-                            export REDIS_PASSWORD=
-                            export RUSTFS_URL=http://host.docker.internal:8123
-                            ;;
-                    esac
-                    set +a
-                    pm2 start dist/main.js --name ${PROJECT_NAME}-${params.ENVIRONMENT}
-                    pm2 save
-                '''
+                script {
+                    def envConfig = [
+                        'dev': [
+                            port: '8118',
+                            dbPort: '3307',
+                            redisPort: '6383',
+                            rustfsPort: '8121',
+                            database: 'together_dev'
+                        ],
+                        'staging': [
+                            port: '8119',
+                            dbPort: '3308',
+                            redisPort: '6384',
+                            rustfsPort: '8122',
+                            database: 'together_staging'
+                        ],
+                        'prod': [
+                            port: '8120',
+                            dbPort: '3309',
+                            redisPort: '6382',
+                            rustfsPort: '8123',
+                            database: 'together_prod'
+                        ]
+                    ][params.ENVIRONMENT]
+
+                    sh """
+                        export NODE_ENV=${params.ENVIRONMENT}
+                        export PORT=${envConfig.port}
+                        export DB_HOST=host.docker.internal
+                        export DB_PORT=${envConfig.dbPort}
+                        export DB_USERNAME=root
+                        export DB_PASSWORD=root123
+                        export DB_DATABASE=${envConfig.database}
+                        export REDIS_HOST=host.docker.internal
+                        export REDIS_PORT=${envConfig.redisPort}
+                        export REDIS_PASSWORD=
+                        export RUSTFS_URL=http://host.docker.internal:${envConfig.rustfsPort}
+
+                        pm2 start dist/main.js --name ${PROJECT_NAME}-${params.ENVIRONMENT}
+                        pm2 save
+                    """
+                }
             }
         }
 
         stage('健康检查') {
             steps {
-                sleep 5
-                sh '''
-                    PORT=$ENVIRONMENT
-                    case $ENVIRONMENT in
-                        dev) PORT=8118 ;;
-                        staging) PORT=8119 ;;
-                        prod) PORT=8120 ;;
-                    esac
-                    
-                    for i in 1 2 3 4 5; do
-                        if curl -sf http://localhost:$PORT/api/v1 >/dev/null 2>&1; then
-                            echo "✅ 服务健康检查通过"
-                            exit 0
-                        fi
-                        echo "等待服务启动... ($i/5)"
-                        sleep 2
-                    done
-                    echo "❌ 服务健康检查失败"
-                    exit 1
-                '''
+                script {
+                    def port = ['dev': '8118', 'staging': '8119', 'prod': '8120'][params.ENVIRONMENT]
+
+                    sh """
+                        echo "等待服务启动..."
+                        sleep 5
+
+                        for i in 1 2 3 4 5; do
+                            if curl -sf http://localhost:${port}/api/v1 >/dev/null 2>&1; then
+                                echo "✅ 服务健康检查通过"
+                                exit 0
+                            fi
+                            echo "等待服务启动... (\$i/5)"
+                            sleep 2
+                        done
+
+                        echo "❌ 服务健康检查失败"
+                        pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 50 --nostream
+                        exit 1
+                    """
+                }
             }
         }
     }
@@ -168,10 +167,19 @@ pipeline {
 
                 echo "✅ 部署成功: ${PROJECT_NAME} - ${params.ENVIRONMENT} - ${params.BRANCH}"
                 echo "🌐 API 访问地址: ${accessUrl}"
+
+                sh "pm2 list"
             }
         }
         failure {
             echo "❌ 部署失败: ${PROJECT_NAME} - ${params.ENVIRONMENT}"
+            sh """
+                echo "查看 PM2 进程状态:"
+                pm2 list || true
+
+                echo "查看最近日志:"
+                pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 100 --nostream || true
+            """
         }
     }
 }
