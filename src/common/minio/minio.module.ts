@@ -20,7 +20,7 @@ export class MinioModule {
     try {
       this.minioService.connect({
         endPoint: this.configService.get('MINIO_ENDPOINT') || 'localhost',
-        port: parseInt(this.configService.get('MINIO_PORT')) || 9000,
+        port: parseInt(this.configService.get('MINIO_PORT') || '9000'),
         accessKey: this.configService.get('MINIO_ACCESS_KEY') || 'admin',
         secretKey: this.configService.get('MINIO_SECRET_KEY') || 'admin123456',
         useSSL: false,

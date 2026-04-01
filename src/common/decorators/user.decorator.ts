@@ -2,7 +2,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export interface JwtPayload {
   sub: number;  // userId
-  id?: number;  // userId alias
+  id: number;  // userId alias
   mobile: string;
   nickname: string;
   username?: string;

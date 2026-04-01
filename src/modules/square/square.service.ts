@@ -135,7 +135,7 @@ export class SquareService {
     // 设置父子关系
     if (replyToId) {
       comment.replyToId = replyToId;
-      comment.replyToUserId = replyToUserId;
+      comment.replyToUserId = replyToUserId ?? null;
 
       // 查询被回复的评论以确定rootId和parentId
       const replyToComment = await this.commentRepository.findOne({

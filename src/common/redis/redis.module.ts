@@ -11,7 +11,7 @@ export class RedisModule {
   constructor(private redisService: RedisService, private configService: ConfigService) {
     this.redisService.connect({
       host: this.configService.get('REDIS_HOST') || 'localhost',
-      port: parseInt(this.configService.get('REDIS_PORT')) || 6379,
+      port: parseInt(this.configService.get('REDIS_PORT') || '6379'),
       password: this.configService.get('REDIS_PASSWORD') || undefined,
     });
   }

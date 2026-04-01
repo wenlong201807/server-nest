@@ -85,7 +85,7 @@ import { FileRecord } from './modules/file/entities/file-record.entity';
           CertificationType,
           FileRecord,
         ],
-        synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+        synchronize: configService.get('NODE_ENV') !== 'production' && configService.get('DB_SYNCHRONIZE') === 'true',
         logging: configService.get('NODE_ENV') === 'development',
         timezone: '+08:00',
         charset: 'utf8mb4',
