@@ -85,7 +85,7 @@ pipeline {
             steps {
                 sh """
                     chmod +x scripts/init-database.sh
-                    bash scripts/init-database.sh ${params.ENVIRONMENT} 127.0.0.1 root root123
+                    bash scripts/init-database.sh ${params.ENVIRONMENT} host.docker.internal root root123
                 """
             }
         }
