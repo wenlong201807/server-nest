@@ -15,7 +15,6 @@ export class User {
   id: number;
 
   @Column({ type: 'varchar', length: 20, unique: true })
-  @Index()
   mobile: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -37,7 +36,6 @@ export class User {
   points: number;
 
   @Column({ type: 'varchar', length: 20, unique: true })
-  @Index()
   inviteCode: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })

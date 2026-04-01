@@ -11,7 +11,16 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(mysql -hlocalhost -P3308 -uroot -proot123 -e \"SELECT 1;\")",
-      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT 1;\")"
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT 1;\")",
+      "Bash(mysql -h127.0.0.1 -P3307 -uroot -proot123 -e \"SHOW TABLES FROM together_dev;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SHOW TABLES FROM together_staging;\")",
+      "Bash(mysql -h127.0.0.1 -P3307 -uroot -proot123 -e \"SELECT COUNT\\(*\\) as cnt FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'together_dev';\")",
+      "Bash(ls -la *.sql migrations/*.sql)",
+      "Bash(mysql -h127.0.0.1 -P3309 -uroot -proot123 -e \"SHOW TABLES FROM together_prod;\")",
+      "Bash(mysql -h127.0.0.1 -P3306 -uroot -proot123 -e \"SHOW DATABASES;\")",
+      "Bash(npm run:*)",
+      "Bash(mysql -h127.0.0.1 -P3307 -uroot -proot123 -e \"DROP DATABASE IF EXISTS together_dev; CREATE DATABASE together_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"DROP DATABASE IF EXISTS together_staging; CREATE DATABASE together_staging CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")"
     ]
   }
 }
