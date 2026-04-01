@@ -47,7 +47,7 @@ fi
 
 # 检查数据库连接
 echo "检查数据库连接..."
-if ! mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD -e "SELECT 1;" >/dev/null 2>&1; then
+if ! mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD -e "SELECT 1;" 2>&1 | grep -q "^1$"; then
     echo "❌ 无法连接到数据库 $DB_HOST:$DB_PORT"
     exit 1
 fi

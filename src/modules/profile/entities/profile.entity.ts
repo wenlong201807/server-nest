@@ -16,7 +16,6 @@ export class UserProfile {
   id: number;
 
   @Column({ type: 'bigint', unique: true })
-  @Index()
   userId: number;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
