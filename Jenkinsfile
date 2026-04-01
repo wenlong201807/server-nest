@@ -8,6 +8,7 @@ pipeline {
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: '选择部署环境')
         string(name: 'BRANCH', defaultValue: 'main', description: '选择部署分支')
+        booleanParam(name: 'CLEAR_CACHE', defaultValue: false, description: '是否强制清除缓存（Redis）')
     }
 
     environment {
@@ -93,6 +94,29 @@ pipeline {
         stage('停止旧服务') {
             steps {
                 sh "pm2 delete ${PROJECT_NAME}-${params.ENVIRONMENT} || true"
+            }
+        }
+
+        stage('清除缓存') {
+            when {
+                expression { params.CLEAR_CACHE == true }
+            }
+            steps {
+                script {
+                    def redisPort = ['dev': '6383', 'staging': '6384', 'prod': '6382'][params.ENVIRONMENT]
+
+                    sh """
+                        echo "🗑️  开始清除 Redis 缓存..."
+
+                        # 使用 redis-cli 清空缓存
+                        if command -v redis-cli >/dev/null 2>&1; then
+                            redis-cli -h host.docker.internal -p ${redisPort} FLUSHDB
+                            echo "✅ Redis 缓存已清除"
+                        else
+                            echo "⚠️  redis-cli 未安装，跳过缓存清除"
+                        fi
+                    """
+                }
             }
         }
 
