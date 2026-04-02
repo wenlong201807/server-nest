@@ -6,7 +6,7 @@ import { PointsService } from '../points/points.service';
 import { RegisterDto, LoginDto, SmsDto } from './dto/auth.dto';
 import { RedisService } from '../../common/redis/redis.service';
 import { nanoid } from 'nanoid';
-import * as bcrypt from 'bcryptjs';
+import { PasswordUtil } from '../../common/utils/password.util';
 import { PointsSourceType } from '@common/constants';
 
 @Injectable()
@@ -119,7 +119,7 @@ export class AuthService {
       throw new UnauthorizedException('账号已被禁用');
     }
 
-    const isValid = await bcrypt.compare(dto.password, user.password);
+    const isValid = await PasswordUtil.compare(dto.password, user.password);
     if (!isValid) {
       throw new UnauthorizedException('密码错误');
     }
