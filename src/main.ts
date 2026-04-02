@@ -27,46 +27,51 @@ async function bootstrap() {
   // CORS配置
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
     // 本地开发环境
-    'http://localhost:3000',      // H5 本地开发
-    'http://localhost:3001',      // Admin 本地开发
-    'http://localhost:9201',      // Swagger UI
-    'http://127.0.0.1:9201',
+    'http://localhost:8106', // H5 本地开发
+    'http://localhost:5073', // Admin 本地开发
+    'http://localhost:9201', // API 本地开发
+    'http://127.0.0.1:9201', // Swagger UI
 
     // Dev 环境
-    'http://localhost:8118',      // 后端 Dev
-    'http://localhost:5173',      // H5 Dev
-    'http://localhost:5174',      // Admin Dev
+    'http://localhost:9201', // 后端 Dev
+    'http://localhost:8106', // H5 Dev
+    'http://localhost:5074', // Admin Dev
 
     // Staging 环境
-    'http://localhost:8119',      // 后端 Staging
-    'http://localhost:5175',      // H5 Staging
-    'http://localhost:5176',      // Admin Staging
+    'http://localhost:9202', // 后端 Staging
+    'http://localhost:8107', // H5 Staging
+    'http://localhost:8094', // Admin Staging
 
     // Production 环境
-    'http://localhost:8120',      // 后端 Production
-    'http://localhost:5177',      // H5 Production
-    'http://localhost:5178',      // Admin Production
+    'http://localhost:9203', // 后端 Production
+    'http://localhost:8108', // H5 Production
+    'http://localhost:5075', // Admin Production
   ];
 
   app.enableCors({
-    origin: (origin, callback) => {
-      // 允许没有 origin 的请求（如 Postman、curl、服务端请求）
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
+    origin: allowedOrigins,
+    // origin: (origin, callback) => {
+    //   // 允许没有 origin 的请求（如 Postman、curl、服务端请求）
+    //   if (!origin) {
+    //     callback(null, true);
+    //     return;
+    //   }
 
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        // 开发环境允许所有 localhost
-        if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      }
-    },
+    //   if (allowedOrigins.includes(origin)) {
+    //     callback(null, true);
+    //   } else {
+    //     // 开发环境允许所有 localhost
+    //     const nodeEnv = process.env.NODE_ENV || 'development';
+    //     if (
+    //       ['development', 'staging'].includes(nodeEnv) &&
+    //       origin.startsWith('http://localhost')
+    //     ) {
+    //       callback(null, true);
+    //     } else {
+    //       callback(new Error('Not allowed by CORS'));
+    //     }
+    //   }
+    // },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

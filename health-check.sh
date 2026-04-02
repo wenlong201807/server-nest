@@ -93,7 +93,7 @@ if curl -sf http://localhost:${APP_PORT}/api/v1 >/dev/null 2>&1; then
     echo -e "${GREEN}✅ API 根路径可访问${NC}"
 
     # 获取响应内容
-    RESPONSE=$(curl -s http://localhost:${APP_PORT}/api/v1)
+    RESPONSE=$(curl -s http://localhost:${APP_PORT}/api/v1/public/config)
     echo -e "${GREEN}   响应: ${RESPONSE}${NC}"
 else
     echo -e "${RED}❌ API 根路径不可访问${NC}"

@@ -185,7 +185,7 @@ pipeline {
             }
         }
 
-        stage('健康检查') {
+        stage('健康检查[后端服务]') {
             steps {
                 script {
                     def port = ['dev': '8118', 'staging': '8119', 'prod': '8120'][params.ENVIRONMENT]

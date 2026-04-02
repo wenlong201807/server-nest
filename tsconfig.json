@@ -23,5 +23,6 @@
       "@common/*": ["common/*"],
       "@config/*": ["config/*"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "test"]
 }
