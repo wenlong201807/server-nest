@@ -1,8 +1,12 @@
 # 构建阶段
 FROM node:22-alpine AS builder
 
+# 设置 npm 镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
 # 安装 pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm && \
+    pnpm config set registry https://registry.npmmirror.com
 
 # 设置工作目录
 WORKDIR /app
@@ -22,8 +26,12 @@ RUN pnpm run build
 # 生产环境镜像
 FROM node:22-alpine AS production
 
+# 设置 npm 镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
 # 安装 pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm && \
+    pnpm config set registry https://registry.npmmirror.com
 
 WORKDIR /app
 
