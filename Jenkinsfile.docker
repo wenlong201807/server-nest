@@ -115,12 +115,12 @@ pipeline {
                             sh """
                                 echo "🏥 健康检查 (端口: ${appPort})..."
 
-                                for i in 1 2 3; do
+                                for i in 1 2 3 4; do
                                     if curl -sf http://localhost:${appPort}/api/v1/public/config >/dev/null 2>&1; then
                                         echo "✅ 服务健康检查通过"
                                         exit 0
                                     fi
-                                    echo "等待服务启动... (\$i/10)"
+                                    echo "等待服务启动... (\$i/4)"
                                     sleep 5
                                 done
 
