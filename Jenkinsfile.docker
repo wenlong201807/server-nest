@@ -65,6 +65,29 @@ pipeline {
                 expression { params.DEPLOY_MODE == 'docker-compose' }
             }
             stages {
+                stage('安装依赖和构建') {
+                    when {
+                        expression { params.REBUILD_IMAGE == true }
+                    }
+                    steps {
+                        sh """
+                            echo "📦 安装依赖..."
+                            if ! command -v pnpm >/dev/null 2>&1; then
+                                npm install -g pnpm
+                            fi
+
+                            # 清理旧的构建产物
+                            rm -rf node_modules dist
+
+                            # 安装依赖
+                            pnpm install --frozen-lockfile
+
+                            echo "🔨 构建项目..."
+                            pnpm run build
+                        """
+                    }
+                }
+
                 stage('停止旧容器') {
                     steps {
                         sh """
@@ -79,7 +102,7 @@ pipeline {
                         expression { params.REBUILD_IMAGE == true }
                     }
                     steps {
-                 sh """
+                        sh """
                             echo "🔨 构建 Docker 镜像..."
                             docker-compose --env-file .env build --no-cache
                         """

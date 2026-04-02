@@ -1,48 +1,14 @@
-# 构建阶段
-FROM node:22-alpine AS builder
-
-# 设置 npm 镜像源
-RUN npm config set registry https://registry.npmmirror.com
-
-# 安装 pnpm
-RUN npm install -g pnpm && \
-    pnpm config set registry https://registry.npmmirror.com
-
-# 设置工作目录
-WORKDIR /app
-
-# 复制 package.json 和 pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml ./
-
-# 安装依赖
-RUN pnpm install --frozen-lockfile
-
-# 复制源代码
-COPY . .
-
-# 构建项目
-RUN pnpm run build
-
 # 生产环境镜像
 FROM node:22-alpine AS production
 
-# 设置 npm 镜像源
-RUN npm config set registry https://registry.npmmirror.com
-
-# 安装 pnpm
-RUN npm install -g pnpm && \
-    pnpm config set registry https://registry.npmmirror.com
-
 WORKDIR /app
 
-# 复制 package.json 和 pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml ./
+# 复制 package.json
+COPY package.json ./
 
-# 只安装生产依赖
-RUN pnpm install --prod --frozen-lockfile
-
-# 从构建阶段复制编译后的代码
-COPY --from=builder /app/dist ./dist
+# 从宿主机复制已安装的依赖和构建产物
+COPY node_modules ./node_modules
+COPY dist ./dist
 
 # 暴露端口（使用环境变量）
 EXPOSE 8118
