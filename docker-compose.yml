@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # MySQL 服务
+  mysql:
+    image: mysql:8.0
+    container_name: together-mysql-${ENV:-dev}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123}
+      MYSQL_DATABASE: ${DB_DATABASE:-together_dev}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis 服务
+  redis:
+    image: redis:7-alpine
+    container_name: together-redis-${ENV:-dev}
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-6383}:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # RustFS 服务 (文件存储)
+  rustfs:
+    image: rustfs:latest  # 需要先构建 RustFS 镜像
+    container_name: together-rustfs-${ENV:-dev}
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      RUST_LOG: info
+    volumes:
+      - rustfs-data:/data
+    ports:
+      - "${RUSTFS_PORT:-8121}:8080"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # NestJS 应用
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: together-app-${ENV:-dev}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${APP_PORT:-8118}
+
+      # 数据库配置
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:-root123}
+      DB_DATABASE: ${DB_DATABASE:-together_dev}
+
+      # Redis 配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # JWT 配置
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # RustFS 配置
+      RUSTFS_URL: http://rustfs:8080
+
+      TZ: Asia/Shanghai
+    ports:
+      - "${APP_PORT:-8118}:8118"
+    networks:
+      - app-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8118/api/v1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    name: together-mysql-data-${ENV:-dev}
+  redis-data:
+    name: together-redis-data-${ENV:-dev}
+  rustfs-data:
+    name: together-rustfs-data-${ENV:-dev}

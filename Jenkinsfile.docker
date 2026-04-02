@@ -1,0 +1,337 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'NodeJS-24'
+    }
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: '选择部署环境')
+        choice(name: 'DEPLOY_MODE', choices: ['docker-compose', 'pm2'], description: '选择部署模式')
+        string(name: 'BRANCH', defaultValue: 'main', description: '选择部署分支')
+        booleanParam(name: 'REBUILD_IMAGE', defaultValue: false, description: '是否重新构建 Docker 镜像')
+        booleanParam(name: 'CLEAR_CACHE', defaultValue: false, description: '是否清除缓存（Redis）')
+    }
+
+    environment {
+        PROJECT_NAME = 'server-nest'
+        DEPLOY_ENV = "${params.ENVIRONMENT}"
+        DOCKER_COMPOSE_FILE = "docker-compose.yml"
+    }
+
+    stages {
+        stage('清理工作空间') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('拉取代码') {
+            steps {
+                script {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH}"]],
+                        extensions: [[$class: 'CloneOption', depth: 1, shallow: true]],
+                        userRemoteConfigs: [[
+                            url: "https://github.com/wenlong201807/server-nest.git",
+                            credentialsId: 'github-credentials'
+                        ]]
+                    ])
+                }
+            }
+        }
+
+        stage('加载环境配置') {
+            steps {
+                script {
+                    // 加载对应环境的配置文件
+                    sh """
+                        if [ -f .env.${params.ENVIRONMENT} ]; then
+                            cp .env.${params.ENVIRONMENT} .env
+                            echo "✅ 已加载 ${params.ENVIRONMENT} 环境配置"
+                            cat .env
+                        else
+                            echo "❌ 环境配置文件 .env.${params.ENVIRONMENT} 不存在"
+                            exit 1
+                        fi
+                    """
+                }
+            }
+        }
+
+        stage('Docker Compose 部署') {
+            when {
+                expression { params.DEPLOY_MODE == 'docker-compose' }
+            }
+            stages {
+                stage('停止旧容器') {
+                    steps {
+                        sh """
+                            echo "🛑 停止 ${params.ENVIRONMENT} 环境的容器..."
+                            docker-compose --env-file .env down || true
+                        """
+                    }
+                }
+
+                stage('构建镜像') {
+                    when {
+                        expression { params.REBUILD_IMAGE == true }
+                    }
+                    steps {
+                 sh """
+                            echo "🔨 构建 Docker 镜像..."
+                            docker-compose --env-file .env build --no-cache
+                        """
+                    }
+                }
+
+                stage('启动服务') {
+                    steps {
+                        sh """
+                            echo "🚀 启动 ${params.ENVIRONMENT} 环境服务..."
+                            docker-compose --env-file .env up -d
+                        """
+                    }
+                }
+
+                stage('等待服务就绪') {
+                    steps {
+                        sh """
+                            echo "⏳ 等待服务启动..."
+                            sleep 10
+
+                            echo "📊 查看容器状态..."
+                            docker-compose --env-file .env ps
+                        """
+                    }
+                }
+
+                stage('健康检查') {
+                    steps {
+                        script {
+                            def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+
+                            sh """
+                                echo "🏥 健康检查 (端口: ${appPort})..."
+
+                                for i in 1 2 3 4 5 6 7 8 9 10; do
+                                    if curl -sf http://localhost:${appPort}/api/v1 >/dev/null 2>&1; then
+                                        echo "✅ 服务健康检查通过"
+                                        exit 0
+                                    fi
+                                    echo "等待服务启动... (\$i/10)"
+                                    sleep 5
+                                done
+
+                                echo "❌ 服务健康检查失败"
+                                echo "查看应用日志："
+                                docker-compose --env-file .env logs app --tail 100
+                                exit 1
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('PM2 部署') {
+            when {
+                expression { params.DEPLOY_MODE == 'pm2' }
+            }
+            stages {
+           stage('安装依赖') {
+                    steps {
+                        sh """
+                            if ! command -v pnpm >/dev/null 2>&1; then
+                                npm install -g pnpm
+                            fi
+
+                            if ! command -v pm2 >/dev/null 2>&1; then
+                                npm install -g pm2
+                            fi
+
+                            # 清理缓存
+                            pnpm store prune || true
+                            rm -rf /var/jenkins_home/.pnpm-store
+                            rm -rf node_modules dist pnpm-lock.yaml
+
+                 # 安装依赖
+                            pnpm install --no-frozen-lockfile
+                        """
+                    }
+                }
+
+                stage('构建') {
+                    steps {
+                        sh """
+                            rm -rf dist
+                            pnpm run build
+                        """
+                    }
+                }
+
+                stage('检查依赖服务') {
+                    steps {
+                        script {
+                            def mysqlPort = sh(script: "grep DB_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def rustfsPort = sh(script: "grep RUSTFS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+
+                            sh """
+                                echo "检查 MySQL (host.docker.internal:${mysqlPort})..."
+                                timeout 3 bash -c "</dev/tcp/host.docker.internal/${mysqlPort}" || (echo "❌ MySQL 不可用" && exit 1)
+
+                                echo "检查 Redis (host.docker.internal:${redisPort})..."
+                                timeout 3 bash -c "</dev/tcp/host.docker.internal/${redisPort}" || (echo "❌ Redis 不可用" && exit 1)
+
+                                echo "检查 RustFS (host.docker.internal:${rustfsPort})..."
+                                timeout 3 bash -c "</dev/tcp/host.docker.internal/${rustfsPort}" || (echo "❌ RustFS 不可用" && exit 1)
+
+                                echo "✅ 所有依赖服务检查通过"
+                            """
+                        }
+                    }
+                }
+
+                stage('停止旧服务') {
+                    steps {
+                        sh "pm2 delete ${PROJECT_NAME}-${params.ENVIRONMENT} || true"
+                    }
+                }
+
+                stage('启动服务') {
+                    steps {
+                        script {
+                            def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def dbPort = sh(script: "grep DB_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                        stfsPort = sh(script: "grep RUSTFS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def dbPassword = sh(script: "grep DB_PASSWORD .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def dbDatabase = sh(script: "grep DB_DATABASE .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def jwtSecret = sh(script: "grep JWT_SECRET .env | cut -d'=' -f2", returnStdout: true).trim()
+
+                            sh """
+                                export NODE_ENV=${params.ENVIRONMENT}
+                                export PORT=${appPort}
+                                export DB_HOST=host.docker.internal
+                                export DB_PORT=${dbPort}
+                                export DB_USERNAME=root
+                                export DB_PASSWORD=${dbPassword}
+                                export DB_DATABASE=${dbDatabase}
+                                export REDIS_HOST=host.docker.internal
+                                export REDIS_PORT=${redisPort}
+                                export REDIS_PASSWORD=
+                                export RUSTFS_URL=http://host.docker.internal:${rustfsPort}
+                                export JWT_SECRET=${jwtSecret}
+                                export JWT_EXPIRES_IN=7d
+
+                                pm2 start dist/main.js --name ${PROJECT_NAME}-${params.ENVIRONMENT}
+                                pm2 save
+                            """
+                        }
+                    }
+                }
+
+                stage('健康检查') {
+                    steps {
+                        script {
+                            def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+
+                            sh """
+                                ech服务启动..."
+                                sleep 5
+
+                                echo "检查 PM2 进程状态..."
+                                pm2 list
+
+                                for i in 1 2 3 4 5; do
+                                    if curl -sf http://localhost:${appPort}/api/v1 >/dev/null 2>&1; then
+                                        echo "✅ 服务健康检查通过 (API 可访问)"
+                                        exit 0
+                                    fi
+                                    echo "等待服务启动... (\$i/5)"
+                                    sleep 3
+                                done
+
+                                echo "❌ 服务健康检查                          echo "查看服务日志："
+                                pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 50 --nostream
+                                exit 1
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('清除缓存') {
+            when {
+                expression { params.CLEAR_CACHE == true }
+            }
+            steps {
+                script {
+                    def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2rnStdout: true).trim()
+
+                    sh """
+                        echo "🗑️  开始清除 Redis 缓存..."
+
+                        if [ "${params.DEPLOY_MODE}" == "docker-compose" ]; then
+                            # Docker Compose 模式：使用容器名
+                            docker exec together-redis-${params.ENVIRONMENT} redis-cli FLUSHDB
+                        else
+                            # PM2 模式：使用 host.docker.internal
+                            if command -v redis-cli >/dev/null 2>&1; then
+                                redis-cli -h host.docker.internal -p ${redisPort} FLUSHDB
+                      se
+                                echo "⚠️  redis-cli 未安装，跳过缓存清除"
+                            fi
+                        fi
+
+                        echo "✅ Redis 缓存已清除"
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                def accessUrl = "http://localhost:${appPort}"
+
+                echo "✅ 部署成功: ${PROJECT_NAME} - ${params.ENVIRONMENT} - ${params.BRANCH}"
+                echo "🌐 API 访问地址: ${accessUrl}/api/v1"
+                echo "📦 部署模式: ${params.DEPLOY_MODE}"
+
+                if (params.DEPLOY_MODE == 'docker-compose') {
+                    sh "docker-compose --env-file .env ps"
+                } else {
+                    sh "pm2 list"
+                }
+            }
+        }
+        failure {
+            echo "❌ 部署失败: ${PROJECT_NAME} - ${params.ENVIRONMENT}"
+            script {
+                if (params.DEPLOY_MODE == 'docker-compose') {
+                    sh """
+                        echo "查看容器状态:"
+                        docker-compose --env-file .env ps || true
+
+                        echo "查看应用日志:"
+                        docker-compose --env-file .env logs app --tail 100 || true
+                    """
+                } else {
+                    sh """
+                        echo "查看 PM2 进程状态:"
+                        pm2 list || true
+
+                        echo "查看最近日志:"
+                        pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 100 --nostream || true
+                    """
+                }
+            }
+        }
+    }
+}

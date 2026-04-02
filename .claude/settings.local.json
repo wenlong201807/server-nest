@@ -45,7 +45,15 @@
       "Bash(pkill -f \"node dist/main.js\")",
       "Bash(redis-cli:*)",
       "Bash(pnpm why:*)",
-      "WebFetch(domain:mp.weixin.qq.com)"
+      "WebFetch(domain:mp.weixin.qq.com)",
+      "Bash(grep -v \"^\\\\.$\")",
+      "Bash(grep -v \"^\\\\.\\\\.$\")",
+      "Bash(grep -v \"\\\\.ts$\")",
+      "Bash(grep -E \"Tool\\\\.ts$\")",
+      "Bash(docker inspect together-mysql-dev:*)",
+      "Bash(mysql -h127.0.0.1 -P3307 -uroot -proot123 -e \"SELECT VERSION\\(\\);\")",
+      "Bash(mysql -h127.0.0.1 -P3308 -uroot -proot123 -e \"SELECT VERSION\\(\\);\")",
+      "Bash(mysql -h127.0.0.1 -P3309 -uroot -proot123 -e \"SELECT VERSION\\(\\);\")"
     ]
   }
 }
