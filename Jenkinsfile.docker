@@ -79,8 +79,8 @@ pipeline {
                             # 清理旧的构建产物
                             rm -rf node_modules dist
 
-                            # 安装依赖
-                            pnpm install --frozen-lockfile
+                            # 安装依赖（不使用 frozen-lockfile）
+                            pnpm install --no-frozen-lockfile
 
                             echo "🔨 构建项目..."
                             pnpm run build
