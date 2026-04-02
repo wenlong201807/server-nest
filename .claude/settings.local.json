@@ -43,7 +43,8 @@
       "Bash(pnpm run:*)",
       "Bash(curl -s http://localhost:3000)",
       "Bash(pkill -f \"node dist/main.js\")",
-      "Bash(redis-cli:*)"
+      "Bash(redis-cli:*)",
+      "Bash(pnpm why:*)"
     ]
   }
 }
