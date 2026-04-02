@@ -1,0 +1,12 @@
+有一个docker容器，
+容器中有jenkins,redis,rustfs,mysql,nginx
+
+现在要部署一个后端服务nestjs。
+它包含三个环境dev,staging,prod
+
+三个环境里，对于redis,rustfs,mysql,nginx 这些配置项需要一一注入对应的配置信息。
+并且在jenkins里，可以自由选择部署分支。
+
+给出jenkins的pipeline script部署脚本
+
+要求：可以验证redis,rustfs,mysql,nginx可以通信，数据库可以执行初始化脚本，nestjs服务可正常稳定运行
