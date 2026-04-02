@@ -41,7 +41,7 @@ pipeline {
 
         stage('安装依赖') {
             steps {
-                sh '''
+                sh """
                     if ! command -v pnpm >/dev/null 2>&1; then
                         npm install -g pnpm
                     fi
@@ -50,19 +50,18 @@ pipeline {
                         npm install -g pm2
                     fi
 
-                    if ! command -v mysql >/dev/null 2>&1; then
-                        apt-get update -qq && apt-get install -y -qq default-mysql-client
-                    fi
-
                     # 清理 pnpm store 缓存（解决缓存损坏问题）
                     pnpm store prune || true
+
+                    # 完全清理 pnpm 全局缓存
+                    rm -rf /var/jenkins_home/.pnpm-store
 
                     # 清理 node_modules、dist 和锁文件
                     rm -rf node_modules dist pnpm-lock.yaml
 
                     # 安装依赖（重新生成 pnpm-lock.yaml）
                     pnpm install --no-frozen-lockfile
-                '''
+                """
             }
         }
 
