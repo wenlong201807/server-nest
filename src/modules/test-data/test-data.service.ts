@@ -11,7 +11,7 @@ import { PostReport } from '../square/entities/report.entity';
 import { Friendship } from '../friend/entities/friendship.entity';
 import { ChatMessage } from '../chat/entities/message.entity';
 import { PointsType, PointsSourceType, CertificationStatus, CertificationType, FriendStatus } from '@common/constants';
-import * as bcrypt from 'bcryptjs';
+import { PasswordUtil } from '../../common/utils/password.util';
 import { nanoid } from 'nanoid';
 
 @Injectable()
@@ -91,7 +91,7 @@ export class TestDataService implements OnModuleInit {
       const inviteCode = nanoid(8).toUpperCase();
       const user = this.userRepository.create({
         mobile: u.mobile,
-        password: await bcrypt.hash('test123456', 10),
+        password: await PasswordUtil.hash('test123456'),
         nickname: u.nickname,
         points: u.points,
         inviteCode,
