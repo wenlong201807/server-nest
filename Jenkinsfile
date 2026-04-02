@@ -72,7 +72,13 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'pnpm run build'
+                sh '''
+                    # 清理旧的构建产物
+                    rm -rf dist
+
+                    # 重新构建
+                    pnpm run build
+                '''
             }
         }
 
