@@ -55,11 +55,14 @@ pipeline {
                     fi
 
                     # 清理 node_modules 和锁文件
-              rm -rf node_modules
-              rm -f pnpm-lock.yaml
+                    rm -rf node_modules
+                    rm -f pnpm-lock.yaml
+
+                    # 确保移除 bcrypt 依赖
+                    pnpm remove bcrypt || true
 
                     # 安装依赖（使用 bcryptjs，无需编译）
-                    pnpm install --frozen-lockfile
+                    pnpm install
                 '''
             }
         }
