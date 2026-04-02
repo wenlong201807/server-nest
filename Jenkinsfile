@@ -57,14 +57,10 @@ pipeline {
                     # 清理 pnpm store 缓存（解决缓存损坏问题）
                     pnpm store prune || true
 
-                    # 清理 node_modules 和锁文件
-                    rm -rf node_modules
-                    rm -f pnpm-lock.yaml
+                    # 清理 node_modules、dist 和锁文件
+                    rm -rf node_modules dist pnpm-lock.yaml
 
-                    # 确保移除 bcrypt 依赖
-                    pnpm remove bcrypt || true
-
-                    # 安装依赖（使用 crypto，无需编译）
+                    # 安装依赖（重新生成 pnpm-lock.yaml）
                     pnpm install --no-frozen-lockfile
                 '''
             }
@@ -72,13 +68,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh '''
-                    # 清理旧的构建产物
-                    rm -rf dist
-
-                    # 重新构建
-                    pnpm run build
-                '''
+                sh 'pnpm run build'
             }
         }
 
