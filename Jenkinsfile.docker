@@ -115,8 +115,8 @@ pipeline {
                             sh """
                                 echo "🏥 健康检查 (端口: ${appPort})..."
 
-                                for i in 1 2 3 4 5 6 7 8 9 10; do
-                                    if curl -sf http://localhost:${appPort}/api/v1 >/dev/null 2>&1; then
+                                for i in 1 2 3; do
+                                    if curl -sf http://localhost:${appPort}/api/v1/public/config >/dev/null 2>&1; then
                                         echo "✅ 服务健康检查通过"
                                         exit 0
                                     fi
@@ -245,8 +245,8 @@ pipeline {
                                 echo "检查 PM2 进程状态..."
                                 pm2 list
 
-                                for i in 1 2 3 4 5; do
-                                    if curl -sf http://localhost:${appPort}/api/v1 >/dev/null 2>&1; then
+                                for i in 1 2 3 4; do
+                                    if curl -sf http://localhost:${appPort}/api/v1/public/config >/dev/null 2>&1; then
                                         echo "✅ 服务健康检查通过 (API 可访问)"
                                         exit 0
                                     fi
