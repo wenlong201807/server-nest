@@ -65,9 +65,15 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('构建') {
             steps {
-                sh 'pnpm run build'
+                sh """
+                    # 删除旧的构建产物（避免缓存旧代码）
+                    rm -rf dist
+
+                    # 使用 pnpm 构建（会自动找到 nest cli）
+                    pnpm run build
+                """
             }
         }
 
@@ -188,16 +194,21 @@ pipeline {
                         echo "等待服务启动..."
                         sleep 5
 
+                        echo "检查 PM2 进程状态..."
+                        pm2 list
+
                         for i in 1 2 3 4 5; do
+                            # 检查 API 根路径
                             if curl -sf http://localhost:${port}/api/v1 >/dev/null 2>&1; then
-                                echo "✅ 服务健康检查通过"
+                                echo "✅ 服务健康检查通过 (API 可访问)"
                                 exit 0
                             fi
                             echo "等待服务启动... (\$i/5)"
-                            sleep 2
+                            sleep 3
                         done
 
                         echo "❌ 服务健康检查失败"
+                        echo "查看服务日志："
                         pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 50 --nostream
                         exit 1
                     """

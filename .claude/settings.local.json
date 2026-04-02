@@ -44,7 +44,8 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(pkill -f \"node dist/main.js\")",
       "Bash(redis-cli:*)",
-      "Bash(pnpm why:*)"
+      "Bash(pnpm why:*)",
+      "WebFetch(domain:mp.weixin.qq.com)"
     ]
   }
 }
