@@ -8,7 +8,7 @@ pipeline {
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: '选择部署环境')
         choice(name: 'DEPLOY_MODE', choices: ['docker-compose', 'pm2'], description: '选择部署模式')
-        string(name: 'BRANCH', defaultValue: 'main', description: '选择部署分支')
+        string(name: 'BRANCH', defaultValue: 'test7', description: '选择部署分支')
         booleanParam(name: 'REBUILD_IMAGE', defaultValue: false, description: '是否重新构建 Docker 镜像')
         booleanParam(name: 'CLEAR_CACHE', defaultValue: false, description: '是否清除缓存（Redis）')
     }
@@ -206,7 +206,7 @@ pipeline {
                             def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
                             def dbPort = sh(script: "grep DB_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
                             def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
-                        stfsPort = sh(script: "grep RUSTFS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
+                            def rustfsPort = sh(script: "grep RUSTFS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
                             def dbPassword = sh(script: "grep DB_PASSWORD .env | cut -d'=' -f2", returnStdout: true).trim()
                             def dbDatabase = sh(script: "grep DB_DATABASE .env | cut -d'=' -f2", returnStdout: true).trim()
                             def jwtSecret = sh(script: "grep JWT_SECRET .env | cut -d'=' -f2", returnStdout: true).trim()
@@ -239,7 +239,7 @@ pipeline {
                             def appPort = sh(script: "grep APP_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
 
                             sh """
-                                ech服务启动..."
+                                echo "等待服务启动..."
                                 sleep 5
 
                                 echo "检查 PM2 进程状态..."
@@ -254,7 +254,8 @@ pipeline {
                                     sleep 3
                                 done
 
-                                echo "❌ 服务健康检查                          echo "查看服务日志："
+                                echo "❌ 服务健康检查失败"
+                                echo "查看服务日志："
                                 pm2 logs ${PROJECT_NAME}-${params.ENVIRONMENT} --lines 50 --nostream
                                 exit 1
                             """
@@ -270,7 +271,7 @@ pipeline {
             }
             steps {
                 script {
-                    def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2rnStdout: true).trim()
+                    def redisPort = sh(script: "grep REDIS_PORT .env | cut -d'=' -f2", returnStdout: true).trim()
 
                     sh """
                         echo "🗑️  开始清除 Redis 缓存..."
@@ -282,7 +283,7 @@ pipeline {
                             # PM2 模式：使用 host.docker.internal
                             if command -v redis-cli >/dev/null 2>&1; then
                                 redis-cli -h host.docker.internal -p ${redisPort} FLUSHDB
-                      se
+                            else
                                 echo "⚠️  redis-cli 未安装，跳过缓存清除"
                             fi
                         fi
