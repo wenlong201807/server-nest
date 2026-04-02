@@ -42,7 +42,7 @@
 | 环境 | 应用端口 | MySQL 端口 | Redis 端口 | RustFS 端口 | 数据库名 |
 |------|---------|-----------|-----------|------------|---------|
 | Dev | 8118 | 3307 | 6383 | 8121 | together_dev |
-| Staging | 8119 | 3308 | 6384 | 8122 | together_staging |
+| Staging | 8125 | 3308 | 6384 | 8122 | together_staging |
 | Prod | 8120 | 3309 | 6382 | 8123 | together_prod |
 
 ---
@@ -120,6 +120,9 @@ server-nest/
 # 启动生产环境
 ./deploy.sh prod start
 
+# 健康检查（⭐ 推荐：启动后 30 秒运行）
+./deploy.sh dev health
+
 # 查看日志
 ./deploy.sh dev logs
 
@@ -135,6 +138,17 @@ server-nest/
 # 重新构建镜像
 ./deploy.sh dev build
 ```
+
+**健康检查功能**:
+
+`./deploy.sh <env> health` 会自动检查：
+- 📦 容器状态
+- 🗄️ MySQL 连接和数据库
+- 💾 Redis 连接和 key 数量
+- 📁 RustFS 端口可访问性
+- 🚀 应用 API 和 Swagger
+- 🏥 容器健康状态
+- 📊 资源使用情况
 
 #### 手动部署
 

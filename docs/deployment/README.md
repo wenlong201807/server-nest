@@ -17,8 +17,8 @@ cd server-nest
 # 2. 启动开发环境
 ./deploy.sh dev start
 
-# 3. 查看服务状态
-./deploy.sh dev ps
+# 3. 等待 30 秒后运行健康检查
+./deploy.sh dev health
 
 # 4. 访问 API
 curl http://localhost:8118/api/v1
@@ -92,6 +92,9 @@ server-nest/
 ./deploy.sh dev start        # 开发环境
 ./deploy.sh staging start    # 预发布环境
 ./deploy.sh prod start       # 生产环境
+
+# 健康检查（启动后等待 30 秒）
+./deploy.sh dev health       # ⭐ 新增：完整健康检查
 
 # 查看日志
 ./deploy.sh dev logs
@@ -225,6 +228,9 @@ RUSTFS_PORT=8123
 # 启动服务
 ./deploy.sh <env> start
 
+# 健康检查（⭐ 推荐：启动后 30 秒运行）
+./deploy.sh <env> health
+
 # 停止服务
 ./deploy.sh <env> stop
 
@@ -239,6 +245,35 @@ RUSTFS_PORT=8123
 
 # 重新构建
 ./deploy.sh <env> build
+```
+
+### 健康检查详情
+
+`./deploy.sh <env> health` 命令会检查：
+
+- 📦 **容器状态**: 所有容器运行状态
+- 🗄️ **MySQL**: 连接状态、数据库、表数量
+- 💾 **Redis**: 连接状态、key 数量
+- 📁 **RustFS**: 端口可访问性
+- 🚀 **应用**: API 端点、Swagger 文档
+- 🏥 **健康状态**: 容器健康检查结果
+- 📊 **资源使用**: CPU、内存使用情况
+
+**示例输出**:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🏥 健康检查 - staging 环境
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ MySQL 运行正常
+✅ 数据库 together_staging 存在
+✅ 数据库包含 17 张表
+✅ Redis 运行正常
+✅ API 根路径可访问
+✅ Swagger 文档可访问
+✅ MySQL 容器健康
+✅ Redis 容器健康
+✅ App 容器健康
 ```
 
 ### Docker Compose 命令
@@ -267,7 +302,28 @@ docker-compose exec app sh
 
 ## 🔍 验证部署
 
-### 1. 检查容器状态
+### 方式 1: 使用健康检查命令（推荐）
+
+```bash
+# 启动服务后等待 30 秒
+./deploy.sh staging start
+
+# 运行完整健康检查
+./deploy.sh staging health
+```
+
+健康检查会自动验证：
+- ✅ 所有容器状态
+- ✅ MySQL/Redis 连接
+- ✅ API 端点可访问性
+- ✅ 容器健康状态
+- ✅ 资源使用情况
+
+---
+
+### 方式 2: 手动验证
+
+#### 1. 检查容器状态
 
 ```bash
 docker-compose ps
@@ -276,23 +332,25 @@ docker-compose ps
 **期望输出**:
 ```
 NAME                    STATUS              PORTS
-together-app-dev        Up (healthy)        0.0.0.0:8118->8118/tcp
-together-mysql-dev      Up (healthy)        0.0.0.0:3307->3306/tcp
-together-redis-dev      Up (healthy)        0.0.0.0:6383->6379/tcp
-together-rustfs-dev     Up (healthy)        0.0.0.0:8121->8080/tcp
+together-app-staging    Up (healthy)        0.0.0.0:8125->8125/tcp
+together-mysql-staging  Up (healthy)        0.0.0.0:3308->3306/tcp
+together-redis-staging  Up (healthy)        0.0.0.0:6384->6379/tcp
 ```
 
-### 2. 测试 API
+#### 2. 测试 API
 
 ```bash
 # 测试根路径
-curl http://localhost:8118/api/v1
+curl http://localhost:8125/api/v1
 
-# 测试健康检查
-curl http://localhost:8118/health
+# 测试公共配置接口
+curl http://localhost:8125/api/v1/public/config
+
+# 访问 Swagger 文档
+open http://localhost:8125/api/docs
 ```
 
-### 3. 查看日志
+#### 3. 查看日志
 
 ```bash
 # 查看应用日志
