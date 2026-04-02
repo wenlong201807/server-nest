@@ -54,6 +54,9 @@ pipeline {
                         apt-get update -qq && apt-get install -y -qq default-mysql-client
                     fi
 
+                    # 清理 pnpm store 缓存（解决缓存损坏问题）
+                    pnpm store prune || true
+
                     # 清理 node_modules 和锁文件
                     rm -rf node_modules
                     rm -f pnpm-lock.yaml
@@ -61,8 +64,8 @@ pipeline {
                     # 确保移除 bcrypt 依赖
                     pnpm remove bcrypt || true
 
-                    # 安装依赖（使用 bcryptjs，无需编译）
-                    pnpm install
+                    # 安装依赖（使用 crypto，无需编译）
+                    pnpm install --no-frozen-lockfile
                 '''
             }
         }
