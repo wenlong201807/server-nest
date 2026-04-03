@@ -13,6 +13,8 @@ import { WebSocketGatewayService } from './websocket-gateway.service';
 
 @WebSocketGateway({
   path: '/ws',
+  pingInterval: 25000,
+  pingTimeout: 60000,
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -20,6 +22,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private logger = new Logger('ChatGateway');
   private userSocketMap = new Map<number, Set<WebSocket>>();
+  private connections = new Map<number, WebSocket>();
 
   constructor(
     private jwtService: JwtService,

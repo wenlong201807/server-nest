@@ -79,8 +79,8 @@ export class AuthService {
       inviteCode = nanoid(8).toUpperCase();
     }
 
-    // 创建用户
-    const user = await this.userService.create({
+    // 使用事务确保数据一致性
+    const user = await this.userService.createWithTransaction({
       mobile: dto.mobile,
       password: dto.password,
       nickname: dto.nickname,
@@ -88,29 +88,6 @@ export class AuthService {
       inviteCode,
       inviterCode: dto.inviteCode,
     });
-
-    // 初始积分
-    await this.pointsService.addPoints(
-      user.id,
-      2000,
-      PointsSourceType.REGISTER,
-      0,
-      '注册赠送',
-    );
-
-    // 邀请人奖励
-    if (dto.inviteCode) {
-      const inviter = await this.userService.findByInviteCode(dto.inviteCode);
-      if (inviter) {
-        await this.pointsService.addPoints(
-          inviter.id,
-          100,
-          PointsSourceType.INVITE,
-          user.id,
-          '邀请用户注册',
-        );
-      }
-    }
 
     // 清除验证码
     await this.redisService.del(key);
@@ -194,11 +171,23 @@ export class AuthService {
       nickname: user.nickname,
     };
 
-    const token = this.jwtService.sign(payload);
+    // 生成 access token (7天)
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: this.configService.get('JWT_EXPIRES_IN') || '7d',
+    });
+
+    // 生成 refresh token (30天)
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_REFRESH_SECRET') || this.configService.get('JWT_SECRET'),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN') || '30d',
+    });
+
     const { password, ...userWithoutPassword } = user;
 
     return {
-      token,
+      token: accessToken,
+      refreshToken,
       user: userWithoutPassword,
     };
   }

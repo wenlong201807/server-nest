@@ -13,27 +13,34 @@ import { FriendStatus } from '@common/constants';
 
 @Entity('friendships')
 @Index(['userId', 'friendId'], { unique: true })
+@Index(['friendId', 'status'])
+@Index(['userId', 'status', 'updatedAt'])
 export class Friendship {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ type: 'bigint' })
-  @Index()
   userId: number;
 
   @Column({ type: 'bigint' })
-  @Index()
   friendId: number;
 
   @Column({ type: 'tinyint', default: FriendStatus.FOLLOWING })
   @Index()
   status: FriendStatus;
 
-  @Column({ type: 'bigint', nullable: true })
+  @Column({ type: 'int', unsigned: true, nullable: true })
   unlockPoints: number;
 
   @Column({ type: 'int', default: 0 })
   chatCount: number;
+
+  @Column({ type: 'boolean', default: false })
+  @Index()
+  isMutual: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastChatAt: Date;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;

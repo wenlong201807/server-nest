@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: together-mysql-staging
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: stagingK7h5PfMgl5qA0eJJW5u+eQ
+      MYSQL_DATABASE: together_staging
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-staging-data:/var/lib/mysql
+    ports:
+      - "3308:3306"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pstagingK7h5PfMgl5qA0eJJW5u+eQ"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    image: redis:7-alpine
+    container_name: together-redis-staging
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - redis-staging-data:/data
+    ports:
+      - "6384:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes --requirepass stagingDhCDuV64QSG1ij6+Lrlq9g
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.staging
+    container_name: together-app-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    ports:
+      - "8129:8129"
+    networks:
+      - app-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8129/api/v1', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-staging-data:
+  redis-staging-data:

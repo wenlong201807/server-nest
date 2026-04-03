@@ -24,7 +24,7 @@ export class RedisService {
     });
 
     this.client.on('connect', () => {
-      console.log('Redis Connected');
+      this.logger.log('Redis Connected');
     });
   }
 

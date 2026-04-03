@@ -1,0 +1,31 @@
+# ============================================
+# 阶段 1: 生产运行（简化版）
+# ============================================
+FROM node:22-alpine AS production
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# 从宿主机复制已构建的产物（MVP 快速部署）
+COPY package.json ./
+COPY node_modules ./node_modules
+COPY dist ./dist
+
+# 创建日志目录
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
+
+# 切换到非 root 用户
+USER nodejs
+
+# 暴露端口
+EXPOSE 8119
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "const port = process.env.PORT || 8119; require('http').get('http://localhost:' + port + '/api/v1', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# 启动应用
+CMD ["node", "dist/main.js"]

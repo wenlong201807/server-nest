@@ -15,14 +15,14 @@ export class MinioService {
     useSSL: boolean;
   }) {
     this.client = new Minio.Client(options);
-    console.log('MinIO Client initialized');
+    this.logger.log('MinIO Client initialized');
   }
 
   async ensureBucket(bucketName: string) {
     const exists = await this.client.bucketExists(bucketName);
     if (!exists) {
       await this.client.makeBucket(bucketName);
-      console.log(`Bucket ${bucketName} created`);
+      this.logger.log(`Bucket ${bucketName} created`);
     }
   }
 

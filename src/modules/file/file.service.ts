@@ -25,11 +25,8 @@ export class FileService {
     this.rustfsSecretKey =
       this.configService.get('RUSTFS_SECRET_KEY') || 'rustfsadmin';
     this.rustfsBucket = this.configService.get('RUSTFS_BUCKET') || 'test-one';
-    console.log(
-      'zwl-->> RustFS配置:',
-      this.rustfsBucket,
-      this.rustfsAccessKey,
-      this.rustfsSecretKey,
+    this.logger.log(
+      `RustFS配置: bucket=${this.rustfsBucket}, accessKey=${this.rustfsAccessKey}`,
     );
 
     this.minioClient = new Client({

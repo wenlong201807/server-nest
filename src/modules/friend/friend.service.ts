@@ -5,7 +5,7 @@ import { Friendship } from './entities/friendship.entity';
 import { UserBlacklist } from './entities/blacklist.entity';
 import { UserService } from '../user/user.service';
 import { PointsService } from '../points/points.service';
-import { FriendStatus, PointsSourceType } from '@common/constants';
+import { FriendStatus, PointsSourceType, REQUIRED_CHAT_COUNT, UNLOCK_FRIEND_POINTS } from '@common/constants';
 
 @Injectable()
 export class FriendService {
@@ -88,20 +88,19 @@ export class FriendService {
       throw new BadRequestException('已经是好友');
     }
 
-    // TODO: 检查聊天次数是否达到8次
-    if (friendship.chatCount < 8) {
-      throw new BadRequestException('需要先互发8条消息');
+    // 检查聊天次数是否达到8次
+    if (friendship.chatCount < REQUIRED_CHAT_COUNT) {
+      throw new BadRequestException(`需要先互发${REQUIRED_CHAT_COUNT - friendship.chatCount}条消息`);
     }
 
     // 检查积分
     const user = await this.userService.findById(userId);
-    const requiredPoints = 50;
-    if (user.points < requiredPoints) {
+    if (user.points < UNLOCK_FRIEND_POINTS) {
       throw new BadRequestException('积分不足');
     }
 
     // 扣除积分
-    await this.pointsService.addPoints(userId, -requiredPoints, PointsSourceType.UNLOCK_CHAT, targetId, '解锁私聊');
+    await this.pointsService.addPoints(userId, -UNLOCK_FRIEND_POINTS, PointsSourceType.UNLOCK_CHAT, targetId, '解锁私聊');
 
     // 更新关系
     friendship.status = FriendStatus.FRIEND;
@@ -117,7 +116,7 @@ export class FriendService {
       await this.friendshipRepository.save(reverseFriendship);
     }
 
-    return { unlocked: true, pointsConsumed: requiredPoints };
+    return { unlocked: true, pointsConsumed: UNLOCK_FRIEND_POINTS };
   }
 
   async deleteFriend(userId: number, targetId: number) {

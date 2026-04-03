@@ -8,20 +8,23 @@ import {
 import { MsgType } from '@common/constants';
 
 @Entity('chat_messages')
+@Index(['senderId', 'receiverId', 'createdAt'])
+@Index(['receiverId', 'isRead'])
 export class ChatMessage {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ type: 'bigint' })
-  @Index()
   senderId: number;
 
   @Column({ type: 'bigint' })
-  @Index()
   receiverId: number;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'varchar', length: 1000, nullable: true })
   content: string;
+
+  @Column({ type: 'text', nullable: true })
+  longContent: string;
 
   @Column({ type: 'tinyint', default: MsgType.TEXT })
   msgType: MsgType;
@@ -29,7 +32,12 @@ export class ChatMessage {
   @Column({ type: 'boolean', default: false })
   isRead: boolean;
 
+  @Column({ type: 'timestamp', nullable: true })
+  readAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deletedAt: Date;
+
   @CreateDateColumn({ type: 'timestamp' })
-  @Index(['senderId', 'receiverId'])
   createdAt: Date;
 }

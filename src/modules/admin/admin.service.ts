@@ -67,7 +67,7 @@ export class AdminService {
     await this.redisService.setJson(key, { code, createdAt: Date.now() }, 300);
     await this.redisService.set(rateKey, '1', 60);
 
-    console.log(`管理员验证码: ${code}`);
+    this.logger.log(`管理员验证码: ${code}`);
 
     return { message: '验证码已发送' };
   }

@@ -35,10 +35,19 @@ export class SquareService {
   ) {}
 
   async createPost(userId: number, dto: CreatePostDto) {
+    // 生成内容预览（前500字符）
+    const contentPreview = dto.content.length > 500
+      ? dto.content.substring(0, 500) + '...'
+      : dto.content;
+
     const post = this.postRepository.create({
       userId,
       content: dto.content,
+      contentPreview,
       images: dto.images || [],
+      hotScore: 0,
+      viewCount: 0,
+      shareCount: 0,
     });
 
     const saved = await this.postRepository.save(post);

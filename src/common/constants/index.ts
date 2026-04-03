@@ -44,9 +44,17 @@ export enum PointsSourceType {
   LIKE = 'like',                // 点赞
   INVITE = 'invite',             // 邀请
   UNLOCK_CHAT = 'unlock_chat',   // 解锁私聊
+  UNLOCK_FRIEND = 'unlock_friend', // 解锁好友
   BUY_FRIEND_SLOT = 'buy_friend_slot', // 购买好友位
   DEDUCT_VIOLATION = 'deduct_violation', // 违规扣除
 }
+
+// 常量配置
+export const REQUIRED_CHAT_COUNT = 8;
+export const UNLOCK_FRIEND_POINTS = 50;
+export const REGISTER_POINTS = 2000;
+export const INVITE_POINTS = 100;
+export const PUBLISH_POST_POINTS = 5;
 
 // 帖子状态
 export enum PostStatus {

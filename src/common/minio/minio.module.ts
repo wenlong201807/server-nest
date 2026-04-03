@@ -29,9 +29,9 @@ export class MinioModule {
       // 确保桶存在
       const bucketName = this.configService.get('MINIO_BUCKET') || 'wertogether';
       await this.minioService.ensureBucket(bucketName);
-      console.log('MinIO connected successfully');
+      Logger.log('MinIO connected successfully', 'MinioModule');
     } catch (error) {
-      console.warn('MinIO connection failed, continuing without MinIO:', error.message);
+      Logger.warn('MinIO connection failed, continuing without MinIO: ' + error.message, 'MinioModule');
     }
   }
 }

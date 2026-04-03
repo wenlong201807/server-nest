@@ -10,6 +10,8 @@ import {
 import { Gender, UserStatus } from '@common/constants';
 
 @Entity('users')
+@Index(['status', 'deletedAt'])
+@Index(['inviterCode', 'createdAt'])
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -17,7 +19,7 @@ export class User {
   @Column({ type: 'varchar', length: 20, unique: true })
   mobile: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 60, comment: 'bcrypt 哈希密码' })
   password: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
@@ -32,7 +34,7 @@ export class User {
   @Column({ type: 'tinyint', default: Gender.UNKNOWN })
   gender: Gender;
 
-  @Column({ type: 'int', default: 2000 })
+  @Column({ type: 'bigint', unsigned: true, default: 2000 })
   points: number;
 
   @Column({ type: 'varchar', length: 20, unique: true })
@@ -51,6 +53,10 @@ export class User {
 
   @Column({ type: 'int', default: 0 })
   violationCount: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @Index()
+  lastLoginAt: Date;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;

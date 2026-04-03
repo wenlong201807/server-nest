@@ -41,13 +41,13 @@ export class TestDataService implements OnModuleInit {
     // Check if test data already exists
     const userCount = await this.userRepository.count();
     if (userCount > 0) {
-      console.log('Test data already exists, skipping...');
+      this.logger.log('Test data already exists, skipping...');
       return;
     }
-    
-    console.log('Creating test data...');
+
+    this.logger.log('Creating test data...');
     await this.createTestData();
-    console.log('Test data created successfully!');
+    this.logger.log('Test data created successfully!');
   }
 
   async createTestData() {
