@@ -393,6 +393,144 @@ describe('Friend API (e2e)', () => {
       expect(followingRes.body.length).toBeGreaterThan(0);
       const followedUser = followingRes.body.find((f: any) => f.user.id === user2Id);
       expect(followedUser).toBeDefined();
+
+      // Step 5: Simulate 8 chat messages by directly updating chat count
+      await dataSource.query(
+        'UPDATE friendships SET chatCount = 8 WHERE userId = ? AND friendId = ?',
+        [user1Id, user2Id],
+      );
+      await dataSource.query(
+        'UPDATE friendships SET chatCount = 8 WHERE userId = ? AND friendId = ?',
+        [user2Id, user1Id],
+      );
+
+      // Step 6: Give user1 enough points (50 points required)
+      await dataSource.query(
+        'UPDATE users SET points = 100 WHERE id = ?',
+        [user1Id],
+      );
+
+      // Step 7: Check status after chat - should be able to unlock
+      const statusAfterChat = await request(app.getHttpServer())
+        .get(`/api/v1/friend/status/${user2Id}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      expect(statusAfterChat.body.chatCount).toBe(8);
+      expect(statusAfterChat.body.canChat).toBe(true);
+      expect(statusAfterChat.body.currentPoints).toBeGreaterThanOrEqual(50);
+
+      // Step 8: Unlock chat (become friends)
+      const unlockRes = await request(app.getHttpServer())
+        .post('/api/v1/friend/unlock-chat')
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({ userId: user2Id })
+        .expect(201);
+
+      expect(unlockRes.body.unlocked).toBe(true);
+      expect(unlockRes.body.pointsConsumed).toBe(50);
+
+      // Step 9: Verify friendship status
+      const finalStatus = await request(app.getHttpServer())
+        .get(`/api/v1/friend/status/${user2Id}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      expect(finalStatus.body.isFriend).toBe(true);
+      expect(finalStatus.body.canChat).toBe(true);
+
+      // Step 10: Verify points were deducted
+      const userAfterUnlock = await dataSource.query(
+        'SELECT points FROM users WHERE id = ?',
+        [user1Id],
+      );
+      expect(userAfterUnlock[0].points).toBe(50); // 100 - 50 = 50
+
+      // Step 11: Check friend list
+      const friendListRes = await request(app.getHttpServer())
+        .get('/api/v1/friend/list')
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      expect(friendListRes.body.length).toBeGreaterThan(0);
+      const friend = friendListRes.body.find((f: any) => f.user.id === user2Id);
+      expect(friend).toBeDefined();
+      expect(friend.status).toBe(1); // FRIEND status
+    });
+
+    it('should fail unlock when insufficient points', async () => {
+      // Register two new users
+      const user1 = {
+        mobile: '13900000030',
+        password: 'Test123456',
+        nickname: 'E2E积分测试用户1',
+        gender: 1,
+        inviteCode: 'E2EPOINTS01',
+      };
+
+      const user2 = {
+        mobile: '13900000031',
+        password: 'Test123456',
+        nickname: 'E2E积分测试用户2',
+        gender: 2,
+        inviteCode: 'E2EPOINTS02',
+      };
+
+      const user1Res = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(user1);
+
+      const user2Res = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(user2);
+
+      const user1Login = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ mobile: user1.mobile, password: user1.password });
+
+      const user1Token = user1Login.body.access_token;
+      const user1Id = user1Res.body.id;
+      const user2Id = user2Res.body.id;
+
+      // Follow each other
+      await request(app.getHttpServer())
+        .post('/api/v1/friend/follow')
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({ userId: user2Id })
+        .expect(201);
+
+      // Simulate 8 chat messages
+      await dataSource.query(
+        'UPDATE friendships SET chatCount = 8 WHERE userId = ? AND friendId = ?',
+        [user1Id, user2Id],
+      );
+
+      // Set points to less than required (e.g., 30 points)
+      await dataSource.query(
+        'UPDATE users SET points = 30 WHERE id = ?',
+        [user1Id],
+      );
+
+      // Try to unlock - should fail
+      await request(app.getHttpServer())
+        .post('/api/v1/friend/unlock-chat')
+        .set('Authorization', `Bearer ${user1Token}`)
+        .send({ userId: user2Id })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain('积分不足');
+        });
+    });
+  });
+
+  describe('Data cleanup', () => {
+    it('should clean up test data', async () => {
+      // Clean up friendships
+      await dataSource.query('DELETE FROM friendships WHERE userId >= 13900000000');
+      await dataSource.query('DELETE FROM user_blacklist WHERE userId >= 13900000000');
+
+      // Clean up users (this will cascade delete related data)
+      await dataSource.query('DELETE FROM users WHERE mobile LIKE "139000000%"');
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MinioService } from './minio.service';
 
@@ -8,6 +8,8 @@ import { MinioService } from './minio.service';
   exports: [MinioService],
 })
 export class MinioModule {
+  private readonly logger = new Logger(MinioModule.name);
+
   constructor(
     private minioService: MinioService,
     private configService: ConfigService,
@@ -29,9 +31,9 @@ export class MinioModule {
       // 确保桶存在
       const bucketName = this.configService.get('MINIO_BUCKET') || 'wertogether';
       await this.minioService.ensureBucket(bucketName);
-      Logger.log('MinIO connected successfully', 'MinioModule');
+      this.logger.log('MinIO connected successfully');
     } catch (error) {
-      Logger.warn('MinIO connection failed, continuing without MinIO: ' + error.message, 'MinioModule');
+      this.logger.warn('MinIO connection failed, continuing without MinIO: ' + error.message);
     }
   }
 }

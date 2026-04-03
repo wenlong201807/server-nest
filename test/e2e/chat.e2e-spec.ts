@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { DataSource } from 'typeorm';
 import { MsgType } from '../../src/common/constants';
+import { WebSocketGatewayService } from '../../src/modules/websocket/websocket-gateway.service';
 
 describe('Chat API (e2e)', () => {
   let app: INestApplication;
@@ -19,12 +20,25 @@ describe('Chat API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
+    // Set global prefix
+    const apiPrefix = process.env.API_PREFIX || 'api/v1';
+    app.setGlobalPrefix(apiPrefix);
+
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
         transform: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
       }),
     );
+
+    // Mock WebSocket gateway to avoid connection issues
+    const wsGatewayService = moduleFixture.get<WebSocketGatewayService>(WebSocketGatewayService);
+    wsGatewayService.sendMessage = jest.fn();
+    wsGatewayService.broadcastMessage = jest.fn();
 
     await app.init();
     dataSource = moduleFixture.get<DataSource>(DataSource);
@@ -42,7 +56,7 @@ describe('Chat API (e2e)', () => {
       .post('/api/v1/auth/register')
       .send(testUser1);
 
-    user1Id = user1RegisterRes.body.id;
+    user1Id = user1RegisterRes.body.data?.id || user1RegisterRes.body.id;
 
     const user1LoginRes = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
@@ -51,7 +65,7 @@ describe('Chat API (e2e)', () => {
         password: testUser1.password,
       });
 
-    user1Token = user1LoginRes.body.access_token;
+    user1Token = user1LoginRes.body.data?.access_token || user1LoginRes.body.access_token;
 
     // Register and login user 2
     const testUser2 = {
@@ -66,7 +80,7 @@ describe('Chat API (e2e)', () => {
       .post('/api/v1/auth/register')
       .send(testUser2);
 
-    user2Id = user2RegisterRes.body.id;
+    user2Id = user2RegisterRes.body.data?.id || user2RegisterRes.body.id;
 
     const user2LoginRes = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
@@ -75,7 +89,7 @@ describe('Chat API (e2e)', () => {
         password: testUser2.password,
       });
 
-    user2Token = user2LoginRes.body.access_token;
+    user2Token = user2LoginRes.body.data?.access_token || user2LoginRes.body.access_token;
 
     // Make them friends by following each other
     await request(app.getHttpServer())
@@ -122,8 +136,9 @@ describe('Chat API (e2e)', () => {
         })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('id');
-          expect(res.body).toHaveProperty('createdAt');
+          const data = res.body.data || res.body;
+          expect(data).toHaveProperty('id');
+          expect(data).toHaveProperty('createdAt');
         });
     });
 
@@ -138,8 +153,9 @@ describe('Chat API (e2e)', () => {
         })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('id');
-          expect(res.body).toHaveProperty('createdAt');
+          const data = res.body.data || res.body;
+          expect(data).toHaveProperty('id');
+          expect(data).toHaveProperty('createdAt');
         });
     });
 
@@ -157,7 +173,7 @@ describe('Chat API (e2e)', () => {
         .post('/api/v1/auth/register')
         .send(user3);
 
-      const user3Id = user3Res.body.id;
+      const user3Id = user3Res.body.data?.id || user3Res.body.id;
 
       return request(app.getHttpServer())
         .post('/api/v1/chat/send')
@@ -246,16 +262,17 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveProperty('data');
-          expect(res.body).toHaveProperty('total');
-          expect(res.body).toHaveProperty('page');
-          expect(res.body).toHaveProperty('pageSize');
-          expect(res.body).toHaveProperty('hasMore');
-          expect(Array.isArray(res.body.data)).toBe(true);
-          expect(res.body.data.length).toBeGreaterThan(0);
-          expect(res.body.data[0]).toHaveProperty('id');
-          expect(res.body.data[0]).toHaveProperty('content');
-          expect(res.body.data[0]).toHaveProperty('isSelf');
+          const data = res.body.data || res.body;
+          expect(data).toHaveProperty('data');
+          expect(data).toHaveProperty('total');
+          expect(data).toHaveProperty('page');
+          expect(data).toHaveProperty('pageSize');
+          expect(data).toHaveProperty('hasMore');
+          expect(Array.isArray(data.data)).toBe(true);
+          expect(data.data.length).toBeGreaterThan(0);
+          expect(data.data[0]).toHaveProperty('id');
+          expect(data.data[0]).toHaveProperty('content');
+          expect(data.data[0]).toHaveProperty('isSelf');
         });
     });
 
@@ -265,8 +282,9 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.page).toBe(1);
-          expect(res.body.pageSize).toBe(2);
+          const data = res.body.data || res.body;
+          expect(data.page).toBe(1);
+          expect(data.pageSize).toBe(2);
         });
     });
 
@@ -276,14 +294,16 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      const firstMessageId = historyRes.body.data[0].id;
+      const data = historyRes.body.data || historyRes.body;
+      const firstMessageId = data.data[0].id;
 
       return request(app.getHttpServer())
         .get(`/api/v1/chat/history/${user2Id}?beforeId=${firstMessageId}`)
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.data.every((msg: any) => msg.id < firstMessageId)).toBe(true);
+          const responseData = res.body.data || res.body;
+          expect(responseData.data.every((msg: any) => msg.id < firstMessageId)).toBe(true);
         });
     });
 
@@ -301,14 +321,15 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200)
         .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-          expect(res.body.length).toBeGreaterThan(0);
-          expect(res.body[0]).toHaveProperty('userId');
-          expect(res.body[0]).toHaveProperty('nickname');
-          expect(res.body[0]).toHaveProperty('avatarUrl');
-          expect(res.body[0]).toHaveProperty('lastMessage');
-          expect(res.body[0]).toHaveProperty('lastTime');
-          expect(res.body[0]).toHaveProperty('unreadCount');
+          const data = res.body.data || res.body;
+          expect(Array.isArray(data)).toBe(true);
+          expect(data.length).toBeGreaterThan(0);
+          expect(data[0]).toHaveProperty('userId');
+          expect(data[0]).toHaveProperty('nickname');
+          expect(data[0]).toHaveProperty('avatarUrl');
+          expect(data[0]).toHaveProperty('lastMessage');
+          expect(data[0]).toHaveProperty('lastTime');
+          expect(data[0]).toHaveProperty('unreadCount');
         });
     });
 
@@ -318,8 +339,9 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      if (res.body.length > 1) {
-        const times = res.body.map((conv: any) => new Date(conv.lastTime).getTime());
+      const data = res.body.data || res.body;
+      if (data.length > 1) {
+        const times = data.map((conv: any) => new Date(conv.lastTime).getTime());
         for (let i = 0; i < times.length - 1; i++) {
           expect(times[i]).toBeGreaterThanOrEqual(times[i + 1]);
         }
@@ -369,7 +391,8 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      const conversationBefore = beforeRes.body.find((c: any) => c.userId === user2Id);
+      const beforeData = beforeRes.body.data || beforeRes.body;
+      const conversationBefore = beforeData.find((c: any) => c.userId === user2Id);
       const unreadCountBefore = conversationBefore?.unreadCount || 0;
 
       // Send a new message
@@ -394,7 +417,8 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${user1Token}`)
         .expect(200);
 
-      const conversationAfter = afterRes.body.find((c: any) => c.userId === user2Id);
+      const afterData = afterRes.body.data || afterRes.body;
+      const conversationAfter = afterData.find((c: any) => c.userId === user2Id);
       expect(conversationAfter.unreadCount).toBe(0);
     });
 
@@ -442,10 +466,10 @@ describe('Chat API (e2e)', () => {
         .post('/api/v1/auth/login')
         .send({ mobile: workflowUser2.mobile, password: workflowUser2.password });
 
-      const wUser1Token = wUser1Login.body.access_token;
-      const wUser2Token = wUser2Login.body.access_token;
-      const wUser1Id = wUser1Res.body.id;
-      const wUser2Id = wUser2Res.body.id;
+      const wUser1Token = wUser1Login.body.data?.access_token || wUser1Login.body.access_token;
+      const wUser2Token = wUser2Login.body.data?.access_token || wUser2Login.body.access_token;
+      const wUser1Id = wUser1Res.body.data?.id || wUser1Res.body.id;
+      const wUser2Id = wUser2Res.body.data?.id || wUser2Res.body.id;
 
       // Make them friends
       await request(app.getHttpServer())
@@ -485,7 +509,8 @@ describe('Chat API (e2e)', () => {
         })
         .expect(201);
 
-      expect(sendRes1.body).toHaveProperty('id');
+      const sendData1 = sendRes1.body.data || sendRes1.body;
+      expect(sendData1).toHaveProperty('id');
 
       await request(app.getHttpServer())
         .post('/api/v1/chat/send')
@@ -503,9 +528,10 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${wUser1Token}`)
         .expect(200);
 
-      expect(historyRes.body.data.length).toBeGreaterThanOrEqual(2);
-      expect(historyRes.body.data.some((msg: any) => msg.content === '工作流测试消息1')).toBe(true);
-      expect(historyRes.body.data.some((msg: any) => msg.content === '工作流测试消息2')).toBe(true);
+      const historyData = historyRes.body.data || historyRes.body;
+      expect(historyData.data.length).toBeGreaterThanOrEqual(2);
+      expect(historyData.data.some((msg: any) => msg.content === '工作流测试消息1')).toBe(true);
+      expect(historyData.data.some((msg: any) => msg.content === '工作流测试消息2')).toBe(true);
 
       // Step 3: Get conversations
       const conversationsRes = await request(app.getHttpServer())
@@ -513,7 +539,8 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${wUser1Token}`)
         .expect(200);
 
-      const conversation = conversationsRes.body.find((c: any) => c.userId === wUser2Id);
+      const conversationsData = conversationsRes.body.data || conversationsRes.body;
+      const conversation = conversationsData.find((c: any) => c.userId === wUser2Id);
       expect(conversation).toBeDefined();
       expect(conversation.unreadCount).toBeGreaterThan(0);
 
@@ -529,7 +556,8 @@ describe('Chat API (e2e)', () => {
         .set('Authorization', `Bearer ${wUser1Token}`)
         .expect(200);
 
-      const conversationAfterRead = conversationsAfterRead.body.find((c: any) => c.userId === wUser2Id);
+      const conversationsAfterData = conversationsAfterRead.body.data || conversationsAfterRead.body;
+      const conversationAfterRead = conversationsAfterData.find((c: any) => c.userId === wUser2Id);
       expect(conversationAfterRead.unreadCount).toBe(0);
     });
   });
