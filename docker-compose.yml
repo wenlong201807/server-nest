@@ -107,7 +107,7 @@ services:
 
       TZ: Asia/Shanghai
     ports:
-      - '${APP_PORT:-8118}:${APP_PORT:-8118}'
+      - '${APP_PORT:-8130}:8130'
     networks:
       - app-network
     depends_on:
