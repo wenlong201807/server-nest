@@ -1,10 +1,8 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
-import * as dotenv from 'dotenv';
 import { join } from 'path';
 
-// 加载环境变量
-dotenv.config();
-
+// 环境变量在运行时已通过 .env 文件或系统环境加载
+// 不需要显式调用 dotenv.config()
 export const dataSourceOptions: DataSourceOptions = {
   type: 'mysql',
   host: process.env.DB_HOST || 'localhost',
