@@ -146,7 +146,19 @@ export class FriendService {
       reason,
     });
 
-    await this.blacklistRepository.save(blacklist);
+    return await this.blacklistRepository.save(blacklist);
+  }
+
+  async unblockUser(userId: number, targetId: number) {
+    const blacklist = await this.blacklistRepository.findOne({
+      where: { userId, blockedUserId: targetId },
+    });
+
+    if (!blacklist) {
+      throw new NotFoundException('黑名单记录不存在');
+    }
+
+    await this.blacklistRepository.remove(blacklist);
   }
 
   async getBlocklist(userId: number) {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, In } from 'typeorm';
 import { FileRecord, FileStatus } from './entities/file-record.entity';
@@ -7,6 +7,7 @@ import { Client } from 'minio';
 
 @Injectable()
 export class FileService {
+  private readonly logger = new Logger(FileService.name);
   private rustfsDomain: string;
   private rustfsAccessKey: string;
   private rustfsSecretKey: string;

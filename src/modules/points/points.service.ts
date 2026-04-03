@@ -178,6 +178,7 @@ export class PointsService {
       like: '点赞',
       invite: '邀请好友',
       unlock_chat: '解锁私聊',
+      unlock_friend: '解锁好友',
       buy_friend_slot: '购买好友位',
       deduct_violation: '违规扣除',
     };

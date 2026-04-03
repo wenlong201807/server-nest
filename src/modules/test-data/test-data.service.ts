@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
@@ -16,6 +16,8 @@ import { nanoid } from 'nanoid';
 
 @Injectable()
 export class TestDataService implements OnModuleInit {
+  private readonly logger = new Logger(TestDataService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
