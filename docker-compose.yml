@@ -54,24 +54,24 @@ services:
     command: redis-server --appendonly yes
 
   # RustFS 服务 (文件存储) - 暂时禁用，使用宿主机的 RustFS
-  rustfs:
-    image: rustfs:latest
-    container_name: together-rustfs-${ENV:-dev}
-    restart: unless-stopped
-    environment:
-      TZ: Asia/Shanghai
-      RUST_LOG: info
-    volumes:
-      - rustfs-data:/data
-    ports:
-      - '${RUSTFS_PORT:-8121}:8080'
-    networks:
-      - app-network
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  # rustfs:
+  #   image: rustfs:latest
+  #   container_name: together-rustfs-${ENV:-dev}
+  #   restart: unless-stopped
+  #   environment:
+  #     TZ: Asia/Shanghai
+  #     RUST_LOG: info
+  #   volumes:
+  #     - rustfs-data:/data
+  #   ports:
+  #     - '${RUSTFS_PORT:-8121}:8080'
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
 
   # NestJS 应用
   app:
@@ -115,10 +115,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rustfs:
-        condition: service_healthy
+      # rustfs:
+      #   condition: service_healthy
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8118/api/v1']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8120/api/v1']
       interval: 30s
       timeout: 3s
       retries: 3
@@ -133,5 +133,5 @@ volumes:
     name: together-mysql-data-${ENV:-dev}
   redis-data:
     name: together-redis-data-${ENV:-dev}
-  rustfs-data:
-    name: together-rustfs-data-${ENV:-dev}
+  # rustfs-data:
+  #   name: together-rustfs-data-${ENV:-dev}
