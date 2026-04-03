@@ -61,11 +61,11 @@ RUN mkdir -p logs && chown -R nodejs:nodejs /app
 USER nodejs
 
 # 暴露端口
-EXPOSE 8118
+EXPOSE 8120
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "const port = process.env.PORT || 8118; require('http').get('http://localhost:' + port + '/api/v1', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.PORT || 8120; require('http').get('http://localhost:' + port + '/api/v1', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # 启动应用
 CMD ["node", "dist/main.js"]

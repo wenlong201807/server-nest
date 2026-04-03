@@ -12,11 +12,21 @@ services:
       - mysql-data:/var/lib/mysql
       - ./scripts/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
     ports:
-      - "${DB_PORT:-3307}:3306"
+      - '${DB_PORT:-3307}:3306'
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root123}"]
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          'localhost',
+          '-u',
+          'root',
+          '-p${DB_PASSWORD:-root123}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,41 +43,41 @@ services:
     volumes:
       - redis-data:/data
     ports:
-      - "${REDIS_PORT:-6383}:6379"
+      - '${REDIS_PORT:-6383}:6379'
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 5
     command: redis-server --appendonly yes
 
   # RustFS 服务 (文件存储) - 暂时禁用，使用宿主机的 RustFS
-  # rustfs:
-  #   image: rustfs:latest
-  #   container_name: together-rustfs-${ENV:-dev}
-  #   restart: unless-stopped
-  #   environment:
-  #     TZ: Asia/Shanghai
-  #     RUST_LOG: info
-  #   volumes:
-  #     - rustfs-data:/data
-  #   ports:
-  #     - "${RUSTFS_PORT:-8121}:8080"
-  #   networks:
-  #     - app-network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
+  rustfs:
+    image: rustfs:latest
+    container_name: together-rustfs-${ENV:-dev}
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      RUST_LOG: info
+    volumes:
+      - rustfs-data:/data
+    ports:
+      - '${RUSTFS_PORT:-8121}:8080'
+    networks:
+      - app-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   # NestJS 应用
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.optimized
       target: production
     container_name: together-app-${ENV:-dev}
     restart: unless-stopped
@@ -96,7 +106,7 @@ services:
 
       TZ: Asia/Shanghai
     ports:
-      - "${APP_PORT:-8118}:${APP_PORT:-8118}"
+      - '${APP_PORT:-8118}:${APP_PORT:-8118}'
     networks:
       - app-network
     depends_on:
@@ -104,10 +114,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # rustfs:
-      #   condition: service_healthy
+      rustfs:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8118/api/v1"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8118/api/v1']
       interval: 30s
       timeout: 3s
       retries: 3
@@ -122,5 +132,5 @@ volumes:
     name: together-mysql-data-${ENV:-dev}
   redis-data:
     name: together-redis-data-${ENV:-dev}
-  # rustfs-data:
-  #   name: together-rustfs-data-${ENV:-dev}
+  rustfs-data:
+    name: together-rustfs-data-${ENV:-dev}
