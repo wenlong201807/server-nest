@@ -61,7 +61,7 @@
       "Bash(docker-compose ps:*)",
       "Bash(docker-compose logs:*)",
       "Bash(./health-check.sh staging:*)",
-      "Bash(curl -v http://localhost:8125/api/v1)",
+      "Bash(curl -v http://localhost:8130/api/v1)",
       "Bash(docker-compose down:*)",
       "Bash(./deploy.sh staging:*)"
     ]
