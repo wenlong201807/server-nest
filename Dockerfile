@@ -19,7 +19,7 @@ EXPOSE 8130
 
 # 健康检查（使用环境变量 APP_PORT）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "const port = process.env.APP_PORT || 8130; require('http').get('http://localhost:' + port + '/api/v1', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.APP_PORT || 8130; require('http').get('http://localhost:' + port + '/api/v1/public/config', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # 使用启动脚本（自动运行 migration）
 CMD ["./scripts/docker-entrypoint.sh"]
