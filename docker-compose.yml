@@ -77,7 +77,8 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.optimized
+      dockerfile: Dockerfile
+      # dockerfile: Dockerfile.optimized
       target: production
     container_name: together-app-${ENV:-dev}
     restart: unless-stopped
