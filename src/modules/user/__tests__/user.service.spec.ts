@@ -146,7 +146,7 @@ describe('UserService', () => {
 
   describe('findByInviteCode', () => {
     it('应该返回存在的用户', async () => {
-      mockRepository.mockResolvedValue(mockUser);
+      mockRepository.findOne.mockResolvedValue(mockUser);
 
       const result = await service.findByInviteCode('ABC12345');
 
@@ -170,7 +170,7 @@ describe('UserService', () => {
       const updateDto = { nickname: 'Updated Name' };
       const updatedUser = { ...mockUser, nickname: 'Updated Name' };
 
-      mocktory.findOne.mockResolvedValue(mockUser);
+      mockRepository.findOne.mockResolvedValue(mockUser);
       mockRepository.save.mockResolvedValue(updatedUser);
 
       const result = await service.update(1, updateDto);
@@ -190,8 +190,8 @@ describe('UserService', () => {
 
   describe('updatePoints', () => {
     it('应该增加积分', async () => {
-      const userWithPoints = { ...mockUoints: 2100 };
-      mockRepone.mockResolvedValue(mockUser);
+      const userWithPoints = { ...mockUser, points: 2100 };
+      mockRepository.findOne.mockResolvedValue(mockUser);
       mockRepository.save.mockResolvedValue(userWithPoints);
 
       const result = await service.updatePoints(1, 100);
@@ -256,7 +256,7 @@ describe('UserService', () => {
         findOne: jest.fn(),
       };
 
-      mockDataSource.transaction.mockImplementation(async (callback) => {
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
         return callback(mockManager);
       });
 
@@ -269,7 +269,7 @@ describe('UserService', () => {
       expect(mockManager.save).toHaveBeenCalledTimes(2); // 用户 + 积分日志
     });
 
-    it('应该处理邀请人奖励=> {
+    it('应该处理邀请人奖励', async () => {
       const createDto = {
         mobile: '13800138000',
         password: 'test123456',
@@ -287,7 +287,7 @@ describe('UserService', () => {
         findOne: jest.fn().mockResolvedValue(inviter),
       };
 
-      mockDataSource.transaction.mockImplementation(async (callback) => {
+      mockDataSource.transaction.mockImplementation(async (callback: any) => {
         return callback(mockManager);
       });
 

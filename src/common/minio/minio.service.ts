@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as Minio from 'minio';
 
 @Injectable()
 export class MinioService {
+  private readonly logger = new Logger(MinioService.name);
   private client: Minio.Client;
 
   constructor() {}

@@ -52,6 +52,7 @@ describe('FriendService', () => {
     };
 
     blacklistRepository = {
+      find: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
@@ -313,6 +314,46 @@ describe('FriendService', () => {
       blacklistRepository.findOne.mockResolvedValue(null);
 
       await expect(service.unblockUser(1, 2)).rejects.toThrow(NotFoundException);
+      await expect(service.unblockUser(1, 2)).rejects.toThrow('黑名单记录不存在');
+    });
+  });
+
+  describe('getBlocklist', () => {
+    it('应该返回黑名单列表', async () => {
+      const blockedUser = {
+        id: 3,
+        nickname: 'Blocked User',
+        avatarUrl: 'blocked.jpg',
+      };
+      const blacklist = [
+        {
+          id: 1,
+          userId: 1,
+          blockedUserId: 3,
+          reason: '骚扰',
+          blockedUser,
+        },
+      ];
+      blacklistRepository.find.mockResolvedValue(blacklist);
+
+      const result = await service.getBlocklist(1);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].user.id).toBe(3);
+      expect(result[0].user.nickname).toBe('Blocked User');
+      expect(result[0].reason).toBe('骚扰');
+      expect(blacklistRepository.find).toHaveBeenCalledWith({
+        where: { userId: 1 },
+        relations: ['blockedUser'],
+      });
+    });
+
+    it('应该返回空数组当没有黑名单', async () => {
+      blacklistRepository.find.mockResolvedValue([]);
+
+      const result = await service.getBlocklist(1);
+
+      expect(result).toEqual([]);
     });
   });
 

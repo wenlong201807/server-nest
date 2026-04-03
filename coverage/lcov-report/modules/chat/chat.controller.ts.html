@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/18</span>
+                <span class='fraction'>18/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/5</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>16/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -107,92 +107,92 @@
 <a name='L42'></a><a href='#L42'>42</a>
 <a name='L43'></a><a href='#L43'>43</a>
 <a name='L44'></a><a href='#L44'>44</a>
-<a name='L45'></a><a href='#L45'>45</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L45'></a><a href='#L45'>45</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { Controller, Get, Post, Put, Param, Query, Body, UseGuards } from '@nestjs/common';</span>
-<span class="cstat-no" title="statement not covered" >import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';</span>
-<span class="cstat-no" title="statement not covered" >import { ChatService } from './chat.service';</span>
-<span class="cstat-no" title="statement not covered" >import { CurrentUser } from '../../common/decorators/user.decorator';</span>
-<span class="cstat-no" title="statement not covered" >import { SendMessageDto } from './dto/chat.dto';</span>
-<span class="cstat-no" title="statement not covered" >import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Controller, Get, Post, Put, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ChatService } from './chat.service';
+import { CurrentUser } from '../../common/decorators/user.decorator';
+import { SendMessageDto } from './dto/chat.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 &nbsp;
 @ApiTags('chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-export <span class="cstat-no" title="statement not covered" >class <span class="cstat-no" title="statement not covered" ><span class="cstat-no" title="statement not covered" >ChatController </span>{</span></span>
-<span class="fstat-no" title="function not covered" >  constructor(private <span class="cstat-no" title="statement not covered" >c</span>hatService: C</span>hatService) {}
+export class ChatController {
+  constructor(private chatService: ChatService) {}
 &nbsp;
   @Post('send')
   @ApiOperation({ summary: '发送消息' })
-<span class="fstat-no" title="function not covered" >  async <span class="cstat-no" title="statement not covered" ></span>sendMessage(@CurrentUser('sub') userId: number, @Body() dto: SendMessageDto) {</span>
-<span class="cstat-no" title="statement not covered" >    return this.chatService.sendMessage(userId, dto);</span>
+  async sendMessage(@CurrentUser('sub') userId: number, @Body() dto: SendMessageDto) {
+    return this.chatService.sendMessage(userId, dto);
   }
 &nbsp;
   @Get('history/:userId')
   @ApiOperation({ summary: '获取聊天记录' })
-<span class="fstat-no" title="function not covered" >  async <span class="cstat-no" title="statement not covered" ></span>getHistory(</span>
+  async getHistory(
     @CurrentUser('sub') userId: number,
     @Param('userId') targetId: number,
-    @Query('page') page: number = <span class="branch-0 cbranch-no" title="branch not covered" >1,</span>
-    @Query('pageSize') pageSize: number = <span class="branch-0 cbranch-no" title="branch not covered" >50,</span>
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 50,
     @Query('beforeId') beforeId?: number,
   ) {
-<span class="cstat-no" title="statement not covered" >    return this.chatService.getHistory(userId, targetId, page, pageSize, beforeId);</span>
+    return this.chatService.getHistory(userId, targetId, page, pageSize, beforeId);
   }
 &nbsp;
   @Get('conversations')
   @ApiOperation({ summary: '获取会话列表' })
-<span class="fstat-no" title="function not covered" >  async <span class="cstat-no" title="statement not covered" ></span>getConversations(@CurrentUser('sub') userId: number) {</span>
-<span class="cstat-no" title="statement not covered" >    return this.chatService.getConversations(userId);</span>
+  async getConversations(@CurrentUser('sub') userId: number) {
+    return this.chatService.getConversations(userId);
   }
 &nbsp;
   @Put('read/:userId')
   @ApiOperation({ summary: '标记已读' })
-<span class="fstat-no" title="function not covered" >  async <span class="cstat-no" title="statement not covered" ></span>markAsRead(@CurrentUser('sub') userId: number, @Param('userId') targetId: number) {</span>
-<span class="cstat-no" title="statement not covered" >    return this.chatService.markAsRead(userId, targetId);</span>
+  async markAsRead(@CurrentUser('sub') userId: number, @Param('userId') targetId: number) {
+    return this.chatService.markAsRead(userId, targetId);
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -202,7 +202,7 @@ export <span class="cstat-no" title="statement not covered" >class <span class="
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-03T07:05:18.655Z
+                at 2026-04-03T09:46:00.510Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
