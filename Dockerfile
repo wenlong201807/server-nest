@@ -10,6 +10,10 @@ COPY package.json ./
 COPY node_modules ./node_modules
 COPY dist ./dist
 
+# 复制启动脚本和 migration 文件
+COPY scripts/docker-entrypoint.sh ./scripts/
+RUN chmod +x ./scripts/docker-entrypoint.sh
+
 # 暴露端口（使用环境变量）
 EXPOSE 8130
 
@@ -17,8 +21,8 @@ EXPOSE 8130
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "const port = process.env.APP_PORT || 8130; require('http').get('http://localhost:' + port + '/api/v1', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# 使用 node 直接运行（不使用 pm2）
-CMD ["node", "dist/main.js"]
+# 使用启动脚本（自动运行 migration）
+CMD ["./scripts/docker-entrypoint.sh"]
 
 # 快速验证配置是否正确
 # ENV=prod docker-compose up -d app

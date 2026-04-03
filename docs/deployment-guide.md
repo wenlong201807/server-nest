@@ -42,14 +42,16 @@
 
 ### 1. 使用 TypeORM Migration
 
+> **重要**：项目已集成 TypeORM Migration，部署时会自动执行数据库变更。详细使用指南请参考 [Migration 管理文档](./migration-guide.md)
+
 #### 1.1 创建迁移文件
 
 ```bash
-# 生成迁移文件
-npm run migration:generate -- -n AddUserAvatarColumn
+# 生成迁移文件（自动对比 Entity 和数据库差异）
+npm run migration:generate src/database/migrations/AddUserAvatarColumn
 
-# 或手动创建
-npm run typeorm migration:create -- -n AddUserAvatarColumn
+# 或手动创建空白迁移
+npm run migration:create src/database/migrations/AddUserAvatarColumn
 ```
 
 #### 1.2 编写迁移脚本
