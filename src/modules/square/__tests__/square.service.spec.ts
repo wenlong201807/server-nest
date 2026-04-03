@@ -314,32 +314,43 @@ describe('SquareService', () => {
   });
 
   describe('createComment', () => {
-    it('应该成功创建评论', async () => {
+    it('应该成功创建顶级评论并更新帖子评论数（覆盖line 180）', async () => {
       const dto = {
         postId: 1,
         content: '这是一条评论',
       };
-      commentRepository.create.mockReturnValue(mockComment);
-      commentRepository.save.mockResolvedValue(mockComment);
+      const topLevelComment = { ...mockComment, rootId: null, parentId: null };
+      commentRepository.create.mockReturnValue(topLevelComment);
+      commentRepository.save.mockResolvedValue(topLevelComment);
       pointsService.addPoints.mockResolvedValue(undefined);
-      const mockQueryBuilder = postRepository.createQueryBuilder();
-      mockQueryBuilder.execute.mockResolvedValue(undefined);
+
+      const mockPostQueryBuilder = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(undefined),
+      };
+      postRepository.createQueryBuilder.mockReturnValue(mockPostQueryBuilder);
 
       const result = await service.createComment(1, dto);
 
       expect(result).toEqual({
-        id: mockComment.id,
+        id: topLevelComment.id,
         message: '评论成功',
       });
+      expect(mockPostQueryBuilder.update).toHaveBeenCalledWith(SquarePost);
+      expect(mockPostQueryBuilder.set).toHaveBeenCalledWith({ commentCount: expect.any(Function) });
+      expect(mockPostQueryBuilder.where).toHaveBeenCalledWith('id = :id', { id: 1 });
+      expect(mockPostQueryBuilder.execute).toHaveBeenCalled();
       expect(pointsService.addPoints).toHaveBeenCalledWith(
         1,
         2,
         PointsSourceType.COMMENT,
-        mockComment.id,
+        topLevelComment.id,
       );
     });
 
-    it('应该支持回复评论', async () => {
+    it('应该支持回复评论并更新根评论回复数（覆盖line 172）', async () => {
       const dto = {
         postId: 1,
         content: '这是一条回复',
@@ -359,14 +370,90 @@ describe('SquareService', () => {
       commentRepository.create.mockReturnValue(replyComment);
       commentRepository.save.mockResolvedValue(replyComment);
       pointsService.addPoints.mockResolvedValue(undefined);
-      const mockQueryBuilder = commentRepository.createQueryBuilder();
-      mockQueryBuilder.execute.mockResolvedValue(undefined);
+
+      const mockCommentQueryBuilder = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(undefined),
+      };
+      commentRepository.createQueryBuilder.mockReturnValue(mockCommentQueryBuilder);
 
       const result = await service.createComment(1, dto);
 
       expect(result.id).toBe(2);
       expect(commentRepository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
+      });
+      expect(mockCommentQueryBuilder.update).toHaveBeenCalledWith(SquareComment);
+      expect(mockCommentQueryBuilder.where).toHaveBeenCalledWith('id = :id', { id: 1 });
+      expect(mockCommentQueryBuilder.execute).toHaveBeenCalled();
+    });
+
+    it('应该处理replyToUserId为undefined的情况（覆盖line 147）', async () => {
+      const dto = {
+        postId: 1,
+        content: '回复但没有replyToUserId',
+        replyToId: 1,
+        replyToUserId: undefined,
+      };
+      const parentComment = { ...mockComment, id: 1, rootId: null };
+      commentRepository.findOne.mockResolvedValue(parentComment);
+
+      let savedComment: any;
+      commentRepository.create.mockImplementation((data: any) => {
+        savedComment = { ...data, id: 2 };
+        return savedComment;
+      });
+      commentRepository.save.mockImplementation((comment: any) => {
+        comment.replyToUserId = comment.replyToUserId ?? null;
+        return Promise.resolve(comment);
+      });
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      const mockCommentQueryBuilder = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(undefined),
+      };
+      commentRepository.createQueryBuilder.mockReturnValue(mockCommentQueryBuilder);
+
+      await service.createComment(1, dto);
+
+      expect(savedComment.replyToUserId).toBeNull();
+    });
+
+    it('应该处理replyToComment不存在的情况', async () => {
+      const dto = {
+        postId: 1,
+        content: '回复不存在的评论',
+        replyToId: 999,
+        replyToUserId: 2,
+      };
+      commentRepository.findOne.mockResolvedValue(null);
+      const replyComment = {
+        ...mockComment,
+        id: 2,
+        replyToId: 999,
+        replyToUserId: 2,
+      };
+      commentRepository.create.mockReturnValue(replyComment);
+      commentRepository.save.mockResolvedValue(replyComment);
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      const mockPostQueryBuilder = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue(undefined),
+      };
+      postRepository.createQueryBuilder.mockReturnValue(mockPostQueryBuilder);
+
+      await service.createComment(1, dto);
+
+      expect(commentRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 999 },
       });
     });
 
@@ -403,57 +490,6 @@ describe('SquareService', () => {
       expect(nestedReply.parentId).toBe(1);
     });
 
-    it('应该在回复时更新根评论的回复数', async () => {
-      const dto = {
-        postId: 1,
-        content: '回复',
-        replyToId: 1,
-        replyToUserId: 2,
-      };
-      const parentComment = { ...mockComment, id: 1, rootId: null };
-      commentRepository.findOne.mockResolvedValue(parentComment);
-      const savedReply = { ...mockComment, id: 2, rootId: 1, parentId: 1 };
-      commentRepository.create.mockReturnValue(savedReply);
-      commentRepository.save.mockResolvedValue(savedReply);
-      pointsService.addPoints.mockResolvedValue(undefined);
-
-      const mockCommentQueryBuilder = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue(undefined),
-      };
-      commentRepository.createQueryBuilder.mockReturnValue(mockCommentQueryBuilder);
-
-      await service.createComment(1, dto);
-
-      expect(mockCommentQueryBuilder.update).toHaveBeenCalledWith(SquareComment);
-      expect(mockCommentQueryBuilder.where).toHaveBeenCalledWith('id = :id', { id: 1 });
-    });
-
-    it('应该在顶级评论时更新帖子的评论数', async () => {
-      const dto = {
-        postId: 1,
-        content: '顶级评论',
-      };
-      const topLevelComment = { ...mockComment, rootId: null, parentId: null };
-      commentRepository.create.mockReturnValue(topLevelComment);
-      commentRepository.save.mockResolvedValue(topLevelComment);
-      pointsService.addPoints.mockResolvedValue(undefined);
-
-      const mockPostQueryBuilder = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue(undefined),
-      };
-      postRepository.createQueryBuilder.mockReturnValue(mockPostQueryBuilder);
-
-      await service.createComment(1, dto);
-
-      expect(mockPostQueryBuilder.update).toHaveBeenCalledWith(SquarePost);
-      expect(mockPostQueryBuilder.where).toHaveBeenCalledWith('id = :id', { id: 1 });
-    });
   });
 
   describe('getComments', () => {
@@ -655,6 +691,137 @@ describe('SquareService', () => {
         reporterId: 1,
         reason: ReportReason.AD,
         description: undefined,
+      });
+    });
+  });
+
+  describe('getComments - 边界分支测试', () => {
+    it('应该处理评论有replyToUser的情况', async () => {
+      const replyToUser = { id: 2, nickname: 'User 2', avatarUrl: 'avatar2.jpg' };
+      const comments = [{ ...mockComment, replyToUser, rootId: null }];
+      commentRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+        getManyAndCount: jest.fn().mockResolvedValue([comments, 1]),
+      });
+
+      const result = await service.getComments(1, 1, 20);
+
+      expect(result.list[0].replyToUser).toEqual({
+        id: replyToUser.id,
+        nickname: replyToUser.nickname,
+      });
+    });
+
+    it('应该处理回复中有replyToUser的情况', async () => {
+      const replyToUser = { id: 3, nickname: 'User 3', avatarUrl: 'avatar3.jpg' };
+      const comments = [{ ...mockComment, id: 1, rootId: 1 }];
+      const replies = [{ ...mockComment, id: 2, rootId: 1, parentId: 1, replyToUser }];
+
+      let callCount = 0;
+      commentRepository.createQueryBuilder.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            leftJoinAndSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockReturnThis(),
+            addOrderBy: jest.fn().mockReturnThis(),
+            skip: jest.fn().mockReturnThis(),
+            take: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            getMany: jest.fn().mockResolvedValue([]),
+            getManyAndCount: jest.fn().mockResolvedValue([comments, 1]),
+          };
+        } else {
+          return {
+            leftJoinAndSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockReturnThis(),
+            getMany: jest.fn().mockResolvedValue(replies),
+          };
+        }
+      });
+
+      const result = await service.getComments(1, 1, 20);
+
+      expect(result.list[0].replies[0].replyToUser).toEqual({
+        id: replyToUser.id,
+        nickname: replyToUser.nickname,
+      });
+    });
+  });
+
+  describe('getReplies - 边界分支测试', () => {
+    it('应该处理回复有replyToUser的情况', async () => {
+      const replyToUser = { id: 3, nickname: 'User 3', avatarUrl: 'avatar3.jpg' };
+      const replies = [
+        { ...mockComment, id: 2, rootId: 1, parentId: 1, replyToUser },
+      ];
+      commentRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([replies, 1]),
+      });
+
+      const result = await service.getReplies(1, 1, 20);
+
+      expect(result.list[0].replyToUser).toEqual({
+        id: replyToUser.id,
+        nickname: replyToUser.nickname,
+      });
+    });
+  });
+
+  describe('toggleLike - 边界分支测试', () => {
+    it('应该处理取消点赞评论的情况（不更新帖子计数）', async () => {
+      const dto = { targetId: 1, targetType: TargetType.COMMENT };
+      const existingLike = { id: 1, userId: 1, ...dto };
+      likeRepository.findOne.mockResolvedValue(existingLike);
+      likeRepository.remove.mockResolvedValue(existingLike);
+
+      const result = await service.toggleLike(1, dto);
+
+      expect(result).toEqual({ isLiked: false });
+      expect(likeRepository.remove).toHaveBeenCalledWith(existingLike);
+    });
+
+    it('应该处理点赞评论的情况（不更新帖子计数）', async () => {
+      const dto = { targetId: 2, targetType: TargetType.COMMENT };
+      likeRepository.findOne.mockResolvedValue(null);
+      likeRepository.create.mockReturnValue({ userId: 1, ...dto });
+      likeRepository.save.mockResolvedValue({ id: 2, userId: 1, ...dto });
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      const result = await service.toggleLike(1, dto);
+
+      expect(result).toEqual({ isLiked: true, pointsEarned: 1 });
+    });
+  });
+
+  describe('getReplyCount - 私有方法测试（覆盖line 338）', () => {
+    it('应该返回评论的回复数', async () => {
+      commentRepository.count = jest.fn().mockResolvedValue(5);
+
+      const result = await (service as any).getReplyCount(1);
+
+      expect(result).toBe(5);
+      expect(commentRepository.count).toHaveBeenCalledWith({
+        where: { parentId: 1 },
       });
     });
   });

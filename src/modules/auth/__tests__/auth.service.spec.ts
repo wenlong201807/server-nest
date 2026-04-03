@@ -326,4 +326,134 @@ describe('AuthService', () => {
       expect(result.user).toBeDefined();
     });
   });
+
+  describe('sendSms - 生产环境分支', () => {
+    it('应该在生产环境记录警告', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'NODE_ENV') return 'production';
+        if (key === 'JWT_SECRET') return 'test_secret';
+        if (key === 'JWT_REFRESH_SECRET') return 'test_refresh_secret';
+        return null;
+      });
+      redisService.get.mockResolvedValue(null);
+      redisService.setJson.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+
+      const loggerSpy = jest.spyOn(service['logger'], 'warn');
+
+      const result = await service.sendSms('13800138000');
+
+      expect(result).toEqual({ message: '验证码已发送' });
+      expect(loggerSpy).toHaveBeenCalledWith('生产环境短信服务未配置');
+    });
+  });
+
+  describe('refreshToken - 额外分支', () => {
+    it('应该拒绝黑名单中的 token', async () => {
+      const refreshToken = 'blacklisted_token';
+      jwtService.verify.mockReturnValue({ sub: 1 });
+      redisService.exists.mockResolvedValue(true);
+
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow('Token 无效或已过期');
+    });
+
+    it('应该拒绝不存在的用户', async () => {
+      const refreshToken = 'valid_token';
+      jwtService.verify.mockReturnValue({ sub: 999 });
+      redisService.exists.mockResolvedValue(false);
+      userService.findById.mockResolvedValue(null);
+
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow('Token 无效或已过期');
+    });
+
+    it('应该拒绝被禁用用户的 token', async () => {
+      const refreshToken = 'valid_token';
+      jwtService.verify.mockReturnValue({ sub: 1 });
+      redisService.exists.mockResolvedValue(false);
+      userService.findById.mockResolvedValue({ ...mockUser, status: 1 });
+
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshToken(refreshToken)).rejects.toThrow('Token 无效或已过期');
+    });
+
+    it('应该使用 JWT_SECRET 作为 fallback', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'NODE_ENV') return 'development';
+        if (key === 'JWT_SECRET') return 'test_secret';
+        if (key === 'JWT_REFRESH_SECRET') return null;
+        return null;
+      });
+      const refreshToken = 'valid_refresh_token';
+      jwtService.verify.mockReturnValue({ sub: 1 });
+      redisService.exists.mockResolvedValue(false);
+      userService.findById.mockResolvedValue(mockUser);
+      jwtService.sign.mockReturnValue('new_token');
+
+      const result = await service.refreshToken(refreshToken);
+
+      expect(result.token).toBe('new_token');
+      expect(jwtService.verify).toHaveBeenCalledWith(refreshToken, {
+        secret: 'test_secret',
+      });
+    });
+  });
+
+  describe('logout - 额外分支', () => {
+    it('应该跳过已过期的 token', async () => {
+      const token = 'expired_token';
+      jwtService.decode.mockReturnValue({ exp: Math.floor(Date.now() / 1000) - 3600 });
+
+      const result = await service.logout(token);
+
+      expect(result).toEqual({ message: '退出成功' });
+      expect(redisService.set).not.toHaveBeenCalled();
+    });
+
+    it('应该处理 token 过期时间为 0 的情况', async () => {
+      const token = 'zero_exp_token';
+      jwtService.decode.mockReturnValue({ exp: Math.floor(Date.now() / 1000) });
+
+      const result = await service.logout(token);
+
+      expect(result).toEqual({ message: '退出成功' });
+      expect(redisService.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('generateToken - 配置 fallback', () => {
+    it('应该使用默认过期时间', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'NODE_ENV') return 'development';
+        if (key === 'JWT_SECRET') return 'test_secret';
+        if (key === 'JWT_REFRESH_SECRET') return null;
+        if (key === 'JWT_EXPIRES_IN') return null;
+        if (key === 'JWT_REFRESH_EXPIRES_IN') return null;
+        return null;
+      });
+      const dto = {
+        mobile: '13800138000',
+        password: 'test123456',
+      };
+      userService.findByMobile.mockResolvedValue(mockUser);
+      jwtService.sign.mockReturnValue('mock_token');
+
+      const result = await service.login(dto);
+
+      expect(result.token).toBe('mock_token');
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          expiresIn: '7d',
+        })
+      );
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          expiresIn: '30d',
+        })
+      );
+    });
+  });
 });

@@ -49,6 +49,32 @@ describe('JwtStrategy', () => {
     jest.clearAllMocks();
   });
 
+  describe('constructor', () => {
+    it('应该使用默认密钥当 JWT_SECRET 未配置', async () => {
+      const mockConfigServiceWithoutSecret = {
+        get: jest.fn(() => null),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          JwtStrategy,
+          {
+            provide: UserService,
+            useValue: mockUserService,
+          },
+          {
+            provide: ConfigService,
+            useValue: mockConfigServiceWithoutSecret,
+          },
+        ],
+      }).compile();
+
+      const strategyInstance = module.get<JwtStrategy>(JwtStrategy);
+      expect(strategyInstance).toBeDefined();
+      expect(mockConfigServiceWithoutSecret.get).toHaveBeenCalledWith('JWT_SECRET');
+    });
+  });
+
   describe('validate', () => {
     it('应该验证管理员 token', async () => {
       const payload = {

@@ -58,6 +58,17 @@ describe('SystemConfigService', () => {
         order: { id: 'ASC' },
       });
     });
+
+    it('应该接受 group 参数但不影响查询', async () => {
+      mockRepository.find.mockResolvedValue([mockConfig]);
+
+      const result = await service.findAll('general');
+
+      expect(result).toEqual([mockConfig]);
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        order: { id: 'ASC' },
+      });
+    });
   });
 
   describe('findByKey', () => {
@@ -260,6 +271,52 @@ describe('SystemConfigService', () => {
           features: ['feature1', 'feature2'],
         },
       });
+    });
+
+    it('应该处理没有子键的配置（覆盖 line 94 的 else 分支）', async () => {
+      const configs = [
+        { ...mockConfig, configKey: 'simpleKey', configValue: 'simpleValue', isPublic: true },
+      ];
+      mockRepository.find.mockResolvedValue(configs);
+
+      const result = await service.getPublicConfigs();
+
+      expect(result).toEqual({
+        simpleKey: 'simpleValue',
+      });
+    });
+
+    it('应该过滤非公开配置', async () => {
+      const configs = [
+        { ...mockConfig, configKey: 'public.key', configValue: 'public', isPublic: true },
+        { ...mockConfig, configKey: 'private.key', configValue: 'private', isPublic: false },
+      ];
+      mockRepository.find.mockResolvedValue(configs);
+
+      const result = await service.getPublicConfigs();
+
+      expect(result).toEqual({
+        public: {
+          key: 'public',
+        },
+      });
+      expect(result.private).toBeUndefined();
+    });
+
+    it('应该过滤未启用的配置', async () => {
+      const configs = [
+        { ...mockConfig, configKey: 'enabled.key', configValue: 'value', isPublic: true, isEnabled: true },
+      ];
+      mockRepository.find.mockResolvedValue(configs);
+
+      const result = await service.getPublicConfigs();
+
+      expect(result).toEqual({
+        enabled: {
+          key: 'value',
+        },
+      });
+      expect(result.disabled).toBeUndefined();
     });
   });
 

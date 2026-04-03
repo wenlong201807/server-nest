@@ -188,4 +188,66 @@ describe('PasswordUtil', () => {
       expect(isValid).toBe(true);
     });
   });
+
+  describe('错误处理', () => {
+    it('hash 方法应该处理 crypto.pbkdf2 错误', async () => {
+      const crypto = require('crypto');
+      const originalPbkdf2 = crypto.pbkdf2;
+
+      crypto.pbkdf2 = (password: any, salt: any, iterations: any, keylen: any, digest: any, callback: any) => {
+        callback(new Error('Crypto error'));
+      };
+
+      await expect(PasswordUtil.hash('test')).rejects.toThrow('Crypto error');
+
+      crypto.pbkdf2 = originalPbkdf2;
+    });
+
+    it('compare 方法应该处理 crypto.pbkdf2 错误', async () => {
+      const crypto = require('crypto');
+      const password = 'test123456';
+      const hashed = await PasswordUtil.hash(password);
+
+      const originalPbkdf2 = crypto.pbkdf2;
+      crypto.pbkdf2 = (password: any, salt: any, iterations: any, keylen: any, digest: any, callback: any) => {
+        callback(new Error('Crypto error'));
+      };
+
+      await expect(PasswordUtil.compare(password, hashed)).rejects.toThrow('Crypto error');
+
+      crypto.pbkdf2 = originalPbkdf2;
+    });
+
+    it('应该处理损坏的哈希值', async () => {
+      const password = 'test123456';
+      const corruptedHash = 'salt.invalidhexvalue!@#';
+      const isValid = await PasswordUtil.compare(password, corruptedHash);
+
+      expect(isValid).toBe(false);
+    });
+
+    it('应该处理空字符串哈希值', async () => {
+      const password = 'test123456';
+      const emptyHash = '';
+      const isValid = await PasswordUtil.compare(password, emptyHash);
+
+      expect(isValid).toBe(false);
+    });
+
+    it('应该处理只有点号的哈希值', async () => {
+      const password = 'test123456';
+      const dotOnlyHash = '.';
+      const isValid = await PasswordUtil.compare(password, dotOnlyHash);
+
+      expect(isValid).toBe(false);
+    });
+
+    it('应该处理多个点号的哈希值', async () => {
+      const password = 'test123456';
+      const multiDotHash = 'salt.hash.extra';
+      const isValid = await PasswordUtil.compare(password, multiDotHash);
+
+      expect(isValid).toBe(false);
+    });
+  });
 });

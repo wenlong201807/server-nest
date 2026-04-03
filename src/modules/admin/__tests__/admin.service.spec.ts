@@ -296,6 +296,21 @@ describe('AdminService', () => {
         await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
         await expect(service.login(dto)).rejects.toThrow('密码不能为空');
       });
+
+      it('应该使用默认用户名和密码', async () => {
+        configService.get.mockReturnValue(null);
+        const dto = {
+          account: 'admin',
+          password: 'admin123',
+          loginType: LoginType.USERNAME,
+        };
+        jwtService.sign.mockReturnValue('mock_token');
+
+        const result = await service.login(dto);
+
+        expect(result.token).toBe('mock_token');
+        expect(result.admin.username).toBe('admin');
+      });
     });
 
     describe('短信验证码登录', () => {
@@ -362,6 +377,40 @@ describe('AdminService', () => {
         await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
         await expect(service.login(dto)).rejects.toThrow('该手机号未绑定管理员');
       });
+
+      it('应该处理空adminConfig', async () => {
+        const dto = {
+          account: '13800138000',
+          code: '123456',
+          loginType: LoginType.MOBILE_SMS,
+        };
+        redisService.getJson.mockResolvedValue({ code: '123456' });
+        configService.get.mockReturnValue(null);
+
+        await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
+        await expect(service.login(dto)).rejects.toThrow('该手机号未绑定管理员');
+      });
+
+      it('应该使用默认admin id', async () => {
+        const dto = {
+          account: '13800138000',
+          code: '123456',
+          loginType: LoginType.MOBILE_SMS,
+        };
+        redisService.getJson.mockResolvedValue({ code: '123456' });
+        redisService.del.mockResolvedValue(undefined);
+        jwtService.sign.mockReturnValue('mock_token');
+        configService.get.mockReturnValue({
+          admins: [
+            { username: 'admin', mobile: '13800138000', role: 'super_admin' },
+          ],
+        });
+
+        const result = await service.login(dto);
+
+        expect(result.token).toBe('mock_token');
+        expect(result.admin.id).toBe(1);
+      });
     });
   });
 
@@ -399,6 +448,43 @@ describe('AdminService', () => {
         status: UserStatus.NORMAL,
       });
     });
+
+    it('应该同时支持关键词和状态筛选', async () => {
+      const mockQueryBuilder = userRepository.createQueryBuilder();
+      await service.getUsers(1, 20, 'test', UserStatus.BANNED);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        '(user.mobile LIKE :keyword OR user.nickname LIKE :keyword)',
+        { keyword: '%test%' }
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('user.status = :status', {
+        status: UserStatus.BANNED,
+      });
+    });
+
+    it('应该处理空手机号', async () => {
+      const mockQueryBuilder = userRepository.createQueryBuilder();
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[{ ...mockUser, mobile: '' }], 1]);
+      userRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getUsers(1, 20);
+
+      expect(result.list[0].mobile).toBe('');
+    });
+
+    it('应该忽略NaN状态值', async () => {
+      const mockQueryBuilder = userRepository.createQueryBuilder();
+      await service.getUsers(1, 20, undefined, NaN);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith('user.status = :status', expect.any(Object));
+    });
+
+    it('应该使用默认分页参数', async () => {
+      const result = await service.getUsers();
+
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
+    });
   });
 
   describe('adjustPoints', () => {
@@ -416,6 +502,36 @@ describe('AdminService', () => {
         '管理员调整'
       );
     });
+
+    it('应该支持负数积分调整', async () => {
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      const result = await service.adjustPoints(1, -50, '扣除违规积分');
+
+      expect(result).toEqual({ message: '积分调整成功' });
+      expect(pointsService.addPoints).toHaveBeenCalledWith(
+        1,
+        -50,
+        PointsSourceType.REGISTER,
+        0,
+        '扣除违规积分'
+      );
+    });
+
+    it('应该支持零积分调整', async () => {
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      const result = await service.adjustPoints(1, 0, '测试调整');
+
+      expect(result).toEqual({ message: '积分调整成功' });
+      expect(pointsService.addPoints).toHaveBeenCalledWith(
+        1,
+        0,
+        PointsSourceType.REGISTER,
+        0,
+        '测试调整'
+      );
+    });
   });
 
   describe('updateUserStatus', () => {
@@ -427,6 +543,30 @@ describe('AdminService', () => {
 
       expect(result).toEqual({ message: '状态更新成功' });
       expect(userRepository.save).toHaveBeenCalled();
+    });
+
+    it('应该更新为正常状态', async () => {
+      userService.findById.mockResolvedValue({ ...mockUser, status: UserStatus.BANNED });
+      userRepository.save.mockResolvedValue({ ...mockUser, status: UserStatus.NORMAL });
+
+      const result = await service.updateUserStatus(1, UserStatus.NORMAL);
+
+      expect(result).toEqual({ message: '状态更新成功' });
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: UserStatus.NORMAL })
+      );
+    });
+
+    it('应该更新为禁言状态', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      userRepository.save.mockResolvedValue({ ...mockUser, status: UserStatus.MUTED });
+
+      const result = await service.updateUserStatus(1, UserStatus.MUTED);
+
+      expect(result).toEqual({ message: '状态更新成功' });
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: UserStatus.MUTED })
+      );
     });
   });
 
@@ -447,6 +587,38 @@ describe('AdminService', () => {
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('cert.status = :status', {
         status: CertificationStatus.PENDING,
       });
+    });
+
+    it('应该筛选已通过的认证', async () => {
+      const mockQueryBuilder = certificationRepository.createQueryBuilder();
+      await service.getCertifications(1, 20, CertificationStatus.APPROVED);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('cert.status = :status', {
+        status: CertificationStatus.APPROVED,
+      });
+    });
+
+    it('应该筛选已拒绝的认证', async () => {
+      const mockQueryBuilder = certificationRepository.createQueryBuilder();
+      await service.getCertifications(1, 20, CertificationStatus.REJECTED);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('cert.status = :status', {
+        status: CertificationStatus.REJECTED,
+      });
+    });
+
+    it('应该不筛选状态当未指定', async () => {
+      const mockQueryBuilder = certificationRepository.createQueryBuilder();
+      await service.getCertifications(1, 20);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith('cert.status = :status', expect.any(Object));
+    });
+
+    it('应该使用默认分页参数', async () => {
+      const result = await service.getCertifications();
+
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
     });
   });
 
@@ -509,6 +681,41 @@ describe('AdminService', () => {
         keyword: '%test%',
       });
     });
+
+    it('应该筛选违规帖子', async () => {
+      const mockQueryBuilder = postRepository.createQueryBuilder();
+      await service.getPosts(1, 20, PostStatus.VIOLATION);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('post.status = :status', {
+        status: PostStatus.VIOLATION,
+      });
+    });
+
+    it('应该同时支持状态和关键词筛选', async () => {
+      const mockQueryBuilder = postRepository.createQueryBuilder();
+      await service.getPosts(1, 20, PostStatus.NORMAL, 'test');
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('post.status = :status', {
+        status: PostStatus.NORMAL,
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('post.content LIKE :keyword', {
+        keyword: '%test%',
+      });
+    });
+
+    it('应该忽略NaN状态值', async () => {
+      const mockQueryBuilder = postRepository.createQueryBuilder();
+      await service.getPosts(1, 20, NaN);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith('post.status = :status', expect.any(Object));
+    });
+
+    it('应该使用默认分页参数', async () => {
+      const result = await service.getPosts();
+
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
+    });
   });
 
   describe('deletePost', () => {
@@ -553,6 +760,40 @@ describe('AdminService', () => {
 
       expect(pointsService.addPoints).not.toHaveBeenCalled();
     });
+
+    it('应该不扣除积分当积分为0', async () => {
+      postRepository.findOne.mockResolvedValue(mockPost);
+      postRepository.save.mockResolvedValue({ ...mockPost, status: PostStatus.VIOLATION });
+
+      await service.deletePost(1, '警告', 0);
+
+      expect(pointsService.addPoints).not.toHaveBeenCalled();
+    });
+
+    it('应该不扣除积分当积分为负数', async () => {
+      postRepository.findOne.mockResolvedValue(mockPost);
+      postRepository.save.mockResolvedValue({ ...mockPost, status: PostStatus.VIOLATION });
+
+      await service.deletePost(1, '测试', -10);
+
+      expect(pointsService.addPoints).not.toHaveBeenCalled();
+    });
+
+    it('应该删除帖子并使用默认原因', async () => {
+      postRepository.findOne.mockResolvedValue(mockPost);
+      postRepository.save.mockResolvedValue({ ...mockPost, status: PostStatus.VIOLATION });
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      await service.deletePost(1, undefined, 30);
+
+      expect(pointsService.addPoints).toHaveBeenCalledWith(
+        1,
+        -30,
+        PointsSourceType.DEDUCT_VIOLATION,
+        1,
+        undefined
+      );
+    });
   });
 
   describe('getReports', () => {
@@ -572,6 +813,29 @@ describe('AdminService', () => {
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('report.status = :status', {
         status: HandleStatus.PENDING,
       });
+    });
+
+    it('应该筛选已处理的举报', async () => {
+      const mockQueryBuilder = reportRepository.createQueryBuilder();
+      await service.getReports(1, 20, HandleStatus.HANDLED);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('report.status = :status', {
+        status: HandleStatus.HANDLED,
+      });
+    });
+
+    it('应该不筛选状态当未指定', async () => {
+      const mockQueryBuilder = reportRepository.createQueryBuilder();
+      await service.getReports(1, 20);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith('report.status = :status', expect.any(Object));
+    });
+
+    it('应该使用默认分页参数', async () => {
+      const result = await service.getReports();
+
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
     });
   });
 
@@ -610,6 +874,55 @@ describe('AdminService', () => {
       await service.handleReport(1, 'delete', 50);
 
       expect(postRepository.save).toHaveBeenCalled();
+    });
+
+    it('应该忽略举报不删除帖子', async () => {
+      reportRepository.findOne.mockResolvedValue(mockReport);
+      reportRepository.save.mockResolvedValue({
+        ...mockReport,
+        status: HandleStatus.HANDLED,
+      });
+
+      await service.handleReport(1, 'ignore');
+
+      expect(postRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('应该删除帖子不扣除积分', async () => {
+      reportRepository.findOne.mockResolvedValue(mockReport);
+      reportRepository.save.mockResolvedValue({
+        ...mockReport,
+        status: HandleStatus.HANDLED,
+      });
+      postRepository.findOne.mockResolvedValue(mockPost);
+      postRepository.save.mockResolvedValue({ ...mockPost, status: PostStatus.VIOLATION });
+
+      await service.handleReport(1, 'delete');
+
+      expect(postRepository.save).toHaveBeenCalled();
+      expect(pointsService.addPoints).not.toHaveBeenCalled();
+    });
+
+    it('应该删除帖子并扣除积分', async () => {
+      reportRepository.findOne.mockResolvedValue(mockReport);
+      reportRepository.save.mockResolvedValue({
+        ...mockReport,
+        status: HandleStatus.HANDLED,
+      });
+      postRepository.findOne.mockResolvedValue(mockPost);
+      postRepository.save.mockResolvedValue({ ...mockPost, status: PostStatus.VIOLATION });
+      pointsService.addPoints.mockResolvedValue(undefined);
+
+      await service.handleReport(1, 'delete', 100);
+
+      expect(postRepository.save).toHaveBeenCalled();
+      expect(pointsService.addPoints).toHaveBeenCalledWith(
+        1,
+        -100,
+        PointsSourceType.DEDUCT_VIOLATION,
+        1,
+        '违规内容'
+      );
     });
   });
 
@@ -667,6 +980,151 @@ describe('AdminService', () => {
           totalConsumed: 0,
         },
       });
+    });
+
+    it('应该支持日期范围筛选', async () => {
+      userRepository.count.mockResolvedValue(50);
+      postRepository.count.mockResolvedValue(200);
+
+      const result = await service.getStatistics('2024-01-01', '2024-12-31');
+
+      expect(result).toEqual({
+        user: {
+          total: 50,
+        },
+        content: {
+          posts: 200,
+        },
+        points: {
+          totalIssued: 0,
+          totalConsumed: 0,
+        },
+      });
+    });
+
+    it('应该处理空数据', async () => {
+      userRepository.count.mockResolvedValue(0);
+      postRepository.count.mockResolvedValue(0);
+
+      const result = await service.getStatistics();
+
+      expect(result).toEqual({
+        user: {
+          total: 0,
+        },
+        content: {
+          posts: 0,
+        },
+        points: {
+          totalIssued: 0,
+          totalConsumed: 0,
+        },
+      });
+    });
+  });
+
+  describe('login22', () => {
+    it('应该调用login方法', async () => {
+      const dto = {
+        account: 'admin',
+        password: 'admin123',
+        loginType: LoginType.USERNAME,
+      };
+      jwtService.sign.mockReturnValue('mock_token');
+
+      const result = await service.login22(dto);
+
+      expect(result.token).toBe('mock_token');
+      expect(result.admin.username).toBe('admin');
+    });
+  });
+
+  describe('login - loginType default', () => {
+    it('应该使用默认登录类型', async () => {
+      const dto = {
+        account: 'admin',
+        password: 'admin123',
+      } as any;
+      jwtService.sign.mockReturnValue('mock_token');
+
+      const result = await service.login(dto);
+
+      expect(result.token).toBe('mock_token');
+    });
+  });
+
+  describe('getConfig - edge cases', () => {
+    it('应该处理空配置列表', async () => {
+      pointsConfigService.findAll.mockResolvedValue([]);
+
+      const result = await service.getConfig();
+
+      expect(result).toEqual({});
+    });
+
+    it('应该处理多个配置项', async () => {
+      pointsConfigService.findAll.mockResolvedValue([
+        { key: 'register', value: 100 },
+        { key: 'daily_signin', value: 10 },
+        { key: 'post', value: 5 },
+        { key: 'comment', value: 2 },
+      ]);
+
+      const result = await service.getConfig();
+
+      expect(result).toEqual({
+        'points.register': 100,
+        'points.daily_signin': 10,
+        'points.post': 5,
+        'points.comment': 2,
+      });
+    });
+  });
+
+  describe('updateConfig - edge cases', () => {
+    it('应该处理单个配置更新', async () => {
+      pointsConfigService.batchUpdate.mockResolvedValue(undefined);
+
+      const config = {
+        'points.register': 150,
+      };
+
+      const result = await service.updateConfig(config);
+
+      expect(result).toEqual({ message: '配置更新成功' });
+      expect(pointsConfigService.batchUpdate).toHaveBeenCalledWith([
+        { key: 'register', value: 150 },
+      ]);
+    });
+
+    it('应该处理多个配置更新', async () => {
+      pointsConfigService.batchUpdate.mockResolvedValue(undefined);
+
+      const config = {
+        'points.register': 200,
+        'points.daily_signin': 20,
+        'points.post': 10,
+      };
+
+      const result = await service.updateConfig(config);
+
+      expect(result).toEqual({ message: '配置更新成功' });
+      expect(pointsConfigService.batchUpdate).toHaveBeenCalledWith([
+        { key: 'register', value: 200 },
+        { key: 'daily_signin', value: 20 },
+        { key: 'post', value: 10 },
+      ]);
+    });
+
+    it('应该处理空配置对象', async () => {
+      pointsConfigService.batchUpdate.mockResolvedValue(undefined);
+
+      const config = {};
+
+      const result = await service.updateConfig(config);
+
+      expect(result).toEqual({ message: '配置更新成功' });
+      expect(pointsConfigService.batchUpdate).toHaveBeenCalledWith([]);
     });
   });
 });

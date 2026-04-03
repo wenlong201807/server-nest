@@ -48,6 +48,18 @@ describe('CertificationTypeService', () => {
   });
 
   describe('findAll', () => {
+    it('应该返回所有启用的认证类型（使用默认参数）', async () => {
+      mockRepository.find.mockResolvedValue([mockType]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([mockType]);
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { isEnabled: true },
+        order: { sortOrder: 'ASC', id: 'ASC' },
+      });
+    });
+
     it('应该返回所有启用的认证类型', async () => {
       mockRepository.find.mockResolvedValue([mockType]);
 

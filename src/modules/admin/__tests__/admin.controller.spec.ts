@@ -105,6 +105,26 @@ describe('AdminController', () => {
       expect(result).toEqual(mockResult);
       expect(adminService.getUsers).toHaveBeenCalledWith(page, pageSize, keyword, status);
     });
+
+    it('应该处理只传递 keyword 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getUsers.mockResolvedValue(mockResult);
+
+      const result = await controller.getUsers(1, 20, 'search');
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getUsers).toHaveBeenCalledWith(1, 20, 'search', undefined);
+    });
+
+    it('应该处理只传递 status 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getUsers.mockResolvedValue(mockResult);
+
+      const result = await controller.getUsers(1, 20, undefined, 0);
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getUsers).toHaveBeenCalledWith(1, 20, undefined, 0);
+    });
   });
 
   describe('adjustPoints', () => {
@@ -159,6 +179,16 @@ describe('AdminController', () => {
       expect(result).toEqual(mockResult);
       expect(adminService.getCertifications).toHaveBeenCalledWith(page, pageSize, status);
     });
+
+    it('应该处理 status 为 0 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getCertifications.mockResolvedValue(mockResult);
+
+      const result = await controller.getCertifications(1, 20, 0);
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getCertifications).toHaveBeenCalledWith(1, 20, 0);
+    });
   });
 
   describe('reviewCertification', () => {
@@ -212,6 +242,26 @@ describe('AdminController', () => {
       expect(result).toEqual(mockResult);
       expect(adminService.getPosts).toHaveBeenCalledWith(page, pageSize, status, keyword);
     });
+
+    it('应该处理只传递 status 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getPosts.mockResolvedValue(mockResult);
+
+      const result = await controller.getPosts(1, 20, 0);
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getPosts).toHaveBeenCalledWith(1, 20, 0, undefined);
+    });
+
+    it('应该处理只传递 keyword 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getPosts.mockResolvedValue(mockResult);
+
+      const result = await controller.getPosts(1, 20, undefined, 'search');
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getPosts).toHaveBeenCalledWith(1, 20, undefined, 'search');
+    });
   });
 
   describe('deletePost', () => {
@@ -262,6 +312,16 @@ describe('AdminController', () => {
 
       expect(result).toEqual(mockResult);
       expect(adminService.getReports).toHaveBeenCalledWith(page, pageSize, status);
+    });
+
+    it('应该处理 status 为 0 的情况', async () => {
+      const mockResult = { data: [], total: 0 };
+      adminService.getReports.mockResolvedValue(mockResult);
+
+      const result = await controller.getReports(1, 20, 0);
+
+      expect(result).toEqual(mockResult);
+      expect(adminService.getReports).toHaveBeenCalledWith(1, 20, 0);
     });
   });
 

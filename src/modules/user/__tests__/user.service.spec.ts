@@ -179,6 +179,44 @@ describe('UserService', () => {
       expect(mockRepository.save).toHaveBeenCalled();
     });
 
+    it('应该更新多个字段', async () => {
+      const updateDto = { nickname: 'New Name', gender: 2 };
+      const updatedUser = { ...mockUser, nickname: 'New Name', gender: 2 };
+
+      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockRepository.save.mockResolvedValue(updatedUser);
+
+      const result = await service.update(1, updateDto);
+
+      expect(result.nickname).toBe('New Name');
+      expect(result.gender).toBe(2);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('应该更新单个字段', async () => {
+      const updateDto = { gender: 0 };
+      const updatedUser = { ...mockUser, gender: 0 };
+
+      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockRepository.save.mockResolvedValue(updatedUser);
+
+      const result = await service.update(1, updateDto);
+
+      expect(result.gender).toBe(0);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('应该更新空对象不改变用户', async () => {
+      const updateDto = {};
+      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockRepository.save.mockResolvedValue(mockUser);
+
+      const result = await service.update(1, updateDto);
+
+      expect(result).toEqual(mockUser);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
     it('应该抛出异常当用户不存在', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 

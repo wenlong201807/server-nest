@@ -189,7 +189,7 @@ describe('PointsService', () => {
       });
     });
 
-    it('应该使用默认描述', async () => {
+    it('应该使用默认描述 - 注册', async () => {
       userService.findById.mockResolvedValue(mockUser);
       pointsLogRepository.create.mockReturnValue({});
       pointsLogRepository.save.mockResolvedValue({});
@@ -201,6 +201,120 @@ describe('PointsService', () => {
       expect(pointsLogRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           description: '注册赠送',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 发布帖子', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 50, PointsSourceType.PUBLISH);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '发布帖子',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 评论', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 20, PointsSourceType.COMMENT);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '评论',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 点赞', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 10, PointsSourceType.LIKE);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '点赞',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 解锁好友', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, -30, PointsSourceType.UNLOCK_FRIEND);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '解锁好友',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 购买好友位', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, -100, PointsSourceType.BUY_FRIEND_SLOT);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '购买好友位',
+        }),
+      );
+    });
+
+    it('应该处理零积分变动', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 0, PointsSourceType.SIGN);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: PointsType.CONSUME,
+          amount: 0,
+          balanceAfter: 1000,
+        }),
+      );
+    });
+
+    it('应该处理没有sourceId的情况', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 100, PointsSourceType.SIGN);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceId: 0,
         }),
       );
     });
@@ -290,6 +404,184 @@ describe('PointsService', () => {
       expect(result.pointsEarned).toBe(10);
       expect(result.continuousDays).toBe(8);
     });
+
+    it('应该处理昨日未签到的情况', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false);
+      redisService.getJson.mockResolvedValue(null);
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(1);
+      expect(result.pointsEarned).toBe(10);
+    });
+
+    it('应该处理连续签到天数为1时不加奖励', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false);
+      redisService.getJson.mockResolvedValue(null);
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.pointsEarned).toBe(10);
+    });
+
+    it('应该处理连续签到超过上限的情况', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue({ continuousDays: 10 });
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.pointsEarned).toBe(10);
+      expect(result.continuousDays).toBe(11);
+    });
+
+    it('应该处理lastSign存在但continuousDays为0的情况', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue({ continuousDays: 0 });
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(1);
+    });
+
+    it('应该处理lastSign为undefined的情况 - 覆盖line 102 falsy分支', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue(undefined);
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(1);
+    });
+
+    it('应该处理lastSign为false的情况 - 覆盖line 102 falsy分支', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue(false);
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(1);
+    });
+
+    it('应该处理lastSign为空字符串的情况 - 覆盖line 102 falsy分支', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue('');
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(1);
+    });
+
+    it('应该处理lastSign有效时正确递增 - 覆盖line 102 truthy分支', async () => {
+      redisService.exists
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+      redisService.getJson.mockResolvedValue({ continuousDays: 5 });
+      pointsConfigService.getValue
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(7);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+      redisService.set.mockResolvedValue(undefined);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await service.sign(1);
+
+      expect(result.continuousDays).toBe(6);
+    });
   });
 
   describe('getSignStatus', () => {
@@ -343,7 +635,7 @@ describe('PointsService', () => {
       });
     });
 
-    it('应该支持按类型筛选', async () => {
+    it('应该支持按类型筛选 - EARN', async () => {
       const mockLogs = [{ id: 1, userId: 1, amount: 100, type: PointsType.EARN }];
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
@@ -363,6 +655,26 @@ describe('PointsService', () => {
       });
     });
 
+    it('应该支持按类型筛选 - CONSUME', async () => {
+      const mockLogs = [{ id: 2, userId: 1, amount: -50, type: PointsType.CONSUME }];
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([mockLogs, 1]),
+      };
+      pointsLogRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getLogs(1, 1, 20, PointsType.CONSUME);
+
+      expect(result.list).toEqual(mockLogs);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('log.type = :type', {
+        type: PointsType.CONSUME,
+      });
+    });
+
     it('应该支持分页', async () => {
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
@@ -378,6 +690,57 @@ describe('PointsService', () => {
 
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(10);
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
+    });
+
+    it('应该处理type为0的情况', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      pointsLogRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getLogs(1, 1, 20, 0);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('log.type = :type', {
+        type: 0,
+      });
+    });
+
+    it('应该处理不传type参数的情况', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      pointsLogRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getLogs(1, 1, 20, undefined);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('应该使用默认分页参数', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      pointsLogRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getLogs(1);
+
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(20);
     });
   });
 
@@ -413,6 +776,55 @@ describe('PointsService', () => {
       expect(pointsLogRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           balanceAfter: -40,
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 未知来源类型 - 覆盖line 185 fallback分支', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      const unknownSourceType = 'unknown_source' as any;
+      await service.addPoints(1, 100, unknownSourceType);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '积分变动',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 邀请好友', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, 200, PointsSourceType.INVITE);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '邀请好友',
+        }),
+      );
+    });
+
+    it('应该使用默认描述 - 违规扣除', async () => {
+      userService.findById.mockResolvedValue(mockUser);
+      pointsLogRepository.create.mockReturnValue({});
+      pointsLogRepository.save.mockResolvedValue({});
+      userService.updatePoints.mockResolvedValue(undefined);
+      redisService.del.mockResolvedValue(undefined);
+
+      await service.addPoints(1, -100, PointsSourceType.DEDUCT_VIOLATION);
+
+      expect(pointsLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: '违规扣除',
         }),
       );
     });

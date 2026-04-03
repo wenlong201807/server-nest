@@ -383,4 +383,295 @@ describe('FriendService', () => {
       await expect(service.unlockChat(1, 2)).rejects.toThrow(/需要先互发1条消息/);
     });
   });
+
+  describe('unlockChat - 双向关系更新', () => {
+    it('应该在没有反向关系时成功解锁', async () => {
+      const friendship = {
+        ...mockFriendship,
+        chatCount: REQUIRED_CHAT_COUNT,
+        status: FriendStatus.FOLLOWING,
+      };
+      friendshipRepository.findOne
+        .mockResolvedValueOnce(friendship)
+        .mockResolvedValueOnce(null);
+      userService.findById.mockResolvedValue(mockUser);
+      pointsService.addPoints.mockResolvedValue(undefined);
+      friendshipRepository.save.mockResolvedValue({ ...friendship, status: FriendStatus.FRIEND });
+
+      const result = await service.unlockChat(1, 2);
+
+      expect(result).toEqual({
+        unlocked: true,
+        pointsConsumed: UNLOCK_FRIEND_POINTS,
+      });
+      expect(friendshipRepository.save).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('isBlocked', () => {
+    it('应该返回true当用户被拉黑', async () => {
+      const blacklist = {
+        id: 1,
+        userId: 2,
+        blockedUserId: 1,
+      };
+      blacklistRepository.findOne.mockResolvedValue(blacklist);
+
+      const result = await service.isBlocked(1, 2);
+
+      expect(result).toBe(true);
+      expect(blacklistRepository.findOne).toHaveBeenCalledWith({
+        where: { userId: 2, blockedUserId: 1 },
+      });
+    });
+
+    it('应该返回false当用户未被拉黑', async () => {
+      blacklistRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.isBlocked(1, 2);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('isFriend', () => {
+    it('应该返回true当是好友', async () => {
+      const friendship = {
+        ...mockFriendship,
+        status: FriendStatus.FRIEND,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+
+      const result = await service.isFriend(1, 2);
+
+      expect(result).toBe(true);
+      expect(friendshipRepository.findOne).toHaveBeenCalledWith({
+        where: { userId: 1, friendId: 2, status: FriendStatus.FRIEND },
+      });
+    });
+
+    it('应该返回false当不是好友', async () => {
+      friendshipRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.isFriend(1, 2);
+
+      expect(result).toBe(false);
+    });
+
+    it('应该返回false当只是关注状态', async () => {
+      friendshipRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.isFriend(1, 2);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getFriendshipStatus', () => {
+    it('应该返回好友状态', async () => {
+      const friendship = {
+        ...mockFriendship,
+        status: FriendStatus.FRIEND,
+        chatCount: 10,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      userService.findById.mockResolvedValue(mockUser);
+
+      const result = await service.getFriendshipStatus(1, 2);
+
+      expect(result).toEqual({
+        isFriend: true,
+        isFollowing: true,
+        canChat: true,
+        chatCount: 10,
+        requiredPoints: 50,
+        currentPoints: 1000,
+      });
+    });
+
+    it('应该返回关注状态但不能聊天（聊天次数不足）', async () => {
+      const friendship = {
+        ...mockFriendship,
+        status: FriendStatus.FOLLOWING,
+        chatCount: 5,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      userService.findById.mockResolvedValue(mockUser);
+
+      const result = await service.getFriendshipStatus(1, 2);
+
+      expect(result).toEqual({
+        isFriend: false,
+        isFollowing: true,
+        canChat: false,
+        chatCount: 5,
+        requiredPoints: 50,
+        currentPoints: 1000,
+      });
+    });
+
+    it('应该返回关注状态但不能聊天（积分不足）', async () => {
+      const friendship = {
+        ...mockFriendship,
+        status: FriendStatus.FOLLOWING,
+        chatCount: 8,
+      };
+      const poorUser = { ...mockUser, points: 30 };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      userService.findById.mockResolvedValue(poorUser);
+
+      const result = await service.getFriendshipStatus(1, 2);
+
+      expect(result).toEqual({
+        isFriend: false,
+        isFollowing: true,
+        canChat: false,
+        chatCount: 8,
+        requiredPoints: 50,
+        currentPoints: 30,
+      });
+    });
+
+    it('应该返回关注状态且可以聊天（满足条件）', async () => {
+      const friendship = {
+        ...mockFriendship,
+        status: FriendStatus.FOLLOWING,
+        chatCount: 8,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      userService.findById.mockResolvedValue(mockUser);
+
+      const result = await service.getFriendshipStatus(1, 2);
+
+      expect(result).toEqual({
+        isFriend: false,
+        isFollowing: true,
+        canChat: true,
+        chatCount: 8,
+        requiredPoints: 50,
+        currentPoints: 1000,
+      });
+    });
+
+    it('应该返回未关注状态', async () => {
+      friendshipRepository.findOne.mockResolvedValue(null);
+      userService.findById.mockResolvedValue(mockUser);
+
+      const result = await service.getFriendshipStatus(1, 2);
+
+      expect(result).toEqual({
+        isFriend: false,
+        isFollowing: false,
+        canChat: false,
+        chatCount: 0,
+        requiredPoints: 50,
+        currentPoints: 1000,
+      });
+    });
+  });
+
+  describe('updateChatCount', () => {
+    it('应该成功更新聊天次数', async () => {
+      const friendship = {
+        ...mockFriendship,
+        chatCount: 5,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      friendshipRepository.save.mockResolvedValue({ ...friendship, chatCount: 6 });
+
+      await service.updateChatCount(1, 2);
+
+      expect(friendshipRepository.save).toHaveBeenCalledWith({
+        ...friendship,
+        chatCount: 6,
+      });
+    });
+
+    it('应该处理聊天次数为0的情况', async () => {
+      const friendship = {
+        ...mockFriendship,
+        chatCount: 0,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      friendshipRepository.save.mockResolvedValue({ ...friendship, chatCount: 1 });
+
+      await service.updateChatCount(1, 2);
+
+      expect(friendshipRepository.save).toHaveBeenCalledWith({
+        ...friendship,
+        chatCount: 1,
+      });
+    });
+
+    it('应该处理聊天次数为null的情况', async () => {
+      const friendship = {
+        ...mockFriendship,
+        chatCount: null,
+      };
+      friendshipRepository.findOne.mockResolvedValue(friendship);
+      friendshipRepository.save.mockResolvedValue({ ...friendship, chatCount: 1 });
+
+      await service.updateChatCount(1, 2);
+
+      expect(friendshipRepository.save).toHaveBeenCalledWith({
+        ...friendship,
+        chatCount: 1,
+      });
+    });
+
+    it('应该在关系不存在时不执行任何操作', async () => {
+      friendshipRepository.findOne.mockResolvedValue(null);
+
+      await service.updateChatCount(1, 2);
+
+      expect(friendshipRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('blockUser - 额外场景', () => {
+    it('应该成功拉黑用户（不提供原因）', async () => {
+      const blacklist = {
+        id: 1,
+        userId: 1,
+        blockedUserId: 2,
+        reason: undefined,
+      };
+      blacklistRepository.findOne.mockResolvedValue(null);
+      blacklistRepository.create.mockReturnValue(blacklist);
+      blacklistRepository.save.mockResolvedValue(blacklist);
+
+      const result = await service.blockUser(1, 2);
+
+      expect(result).toEqual(blacklist);
+      expect(blacklistRepository.create).toHaveBeenCalledWith({
+        userId: 1,
+        blockedUserId: 2,
+        reason: undefined,
+      });
+    });
+  });
+
+  describe('getFollowingList - 额外场景', () => {
+    it('应该返回空数组当没有关注', async () => {
+      friendshipRepository.find.mockResolvedValue([]);
+
+      const result = await service.getFollowingList(1);
+
+      expect(result).toEqual([]);
+    });
+
+    it('应该返回包含不同状态的关注列表', async () => {
+      const friendships = [
+        { ...mockFriendship, status: FriendStatus.FOLLOWING },
+        { ...mockFriendship, id: 2, friendId: 3, status: FriendStatus.FRIEND, friend: { ...mockFriend, id: 3 } },
+      ];
+      friendshipRepository.find.mockResolvedValue(friendships);
+
+      const result = await service.getFollowingList(1);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toBe(FriendStatus.FOLLOWING);
+      expect(result[1].status).toBe(FriendStatus.FRIEND);
+    });
+  });
 });

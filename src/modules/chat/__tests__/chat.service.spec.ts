@@ -167,7 +167,7 @@ describe('ChatService', () => {
       ).rejects.toThrow('对方已拉黑你');
     });
 
-    it('应该支持不同消息类型', async () => {
+    it('应该支持图片消息类型', async () => {
       friendService.isFriend.mockResolvedValue(true);
       friendService.isBlocked.mockResolvedValue(false);
       const imageMessage = { ...mockMessage, msgType: MsgType.IMAGE };
@@ -187,6 +187,81 @@ describe('ChatService', () => {
         receiverId: 2,
         content: 'http://example.com/image.jpg',
         msgType: MsgType.IMAGE,
+      });
+    });
+
+    it('应该支持表情消息类型', async () => {
+      friendService.isFriend.mockResolvedValue(true);
+      friendService.isBlocked.mockResolvedValue(false);
+      const emojiMessage = { ...mockMessage, msgType: MsgType.EMOJI };
+      messageRepository.create.mockReturnValue(emojiMessage);
+      messageRepository.save.mockResolvedValue(emojiMessage);
+      friendService.updateChatCount.mockResolvedValue(undefined);
+      wsGateway.sendMessage.mockReturnValue(undefined);
+
+      await service.sendMessage(1, {
+        receiverId: 2,
+        content: '😊',
+        msgType: MsgType.EMOJI,
+      });
+
+      expect(messageRepository.create).toHaveBeenCalledWith({
+        senderId: 1,
+        receiverId: 2,
+        content: '😊',
+        msgType: MsgType.EMOJI,
+      });
+    });
+
+    it('应该使用默认消息类型当未提供时', async () => {
+      friendService.isFriend.mockResolvedValue(true);
+      friendService.isBlocked.mockResolvedValue(false);
+      messageRepository.create.mockReturnValue(mockMessage);
+      messageRepository.save.mockResolvedValue(mockMessage);
+      friendService.updateChatCount.mockResolvedValue(undefined);
+      wsGateway.sendMessage.mockReturnValue(undefined);
+
+      await service.sendMessage(1, {
+        receiverId: 2,
+        content: '你好',
+      } as any);
+
+      expect(messageRepository.create).toHaveBeenCalledWith({
+        senderId: 1,
+        receiverId: 2,
+        content: '你好',
+        msgType: MsgType.TEXT,
+      });
+    });
+
+    it('应该正确推送消息给接收者和发送者', async () => {
+      friendService.isFriend.mockResolvedValue(true);
+      friendService.isBlocked.mockResolvedValue(false);
+      messageRepository.create.mockReturnValue(mockMessage);
+      messageRepository.save.mockResolvedValue(mockMessage);
+      friendService.updateChatCount.mockResolvedValue(undefined);
+      wsGateway.sendMessage.mockReturnValue(undefined);
+
+      await service.sendMessage(1, {
+        receiverId: 2,
+        content: '你好',
+        msgType: MsgType.TEXT,
+      });
+
+      expect(wsGateway.sendMessage).toHaveBeenNthCalledWith(1, 2, {
+        type: 'message',
+        data: expect.objectContaining({
+          isSelf: false,
+          isRead: false,
+        }),
+      });
+
+      expect(wsGateway.sendMessage).toHaveBeenNthCalledWith(2, 1, {
+        type: 'message',
+        data: expect.objectContaining({
+          isSelf: true,
+          isRead: true,
+        }),
       });
     });
   });
@@ -212,6 +287,42 @@ describe('ChatService', () => {
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(50);
       expect(result.hasMore).toBe(false);
+    });
+
+    it('应该使用默认参数值当未提供 page 和 pageSize', async () => {
+      const messages = [{ ...mockMessage, id: 1 }];
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([messages, 1]),
+      };
+      messageRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getHistory(1, 2);
+
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(50);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(50);
+    });
+
+    it('应该不调用 andWhere 当 beforeId 未提供', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      messageRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getHistory(1, 2, 1, 50);
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
     });
 
     it('应该支持分页', async () => {

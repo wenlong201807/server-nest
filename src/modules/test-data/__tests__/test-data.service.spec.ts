@@ -278,6 +278,136 @@ describe('TestDataService', () => {
 
       expect(commentRepository.create).not.toHaveBeenCalled();
     });
+
+    it('should set replyToUserId to null when replyToId is null (line 213 branch)', async () => {
+      const mockUsers = [
+        { id: 1, mobile: '13800000001', nickname: '用户A' },
+        { id: 2, mobile: '13800000002', nickname: '用户B' },
+        { id: 3, mobile: '13800000003', nickname: '用户C' },
+      ] as User[];
+
+      const mockPosts = [
+        { id: 1, userId: 1, content: 'Test post 1' },
+      ] as SquarePost[];
+
+      postRepository.find.mockResolvedValue(mockPosts);
+      commentRepository.create.mockImplementation((data: any) => data as SquareComment);
+      commentRepository.save.mockImplementation((comment: any) =>
+        Promise.resolve({ ...comment, id: 1 } as SquareComment)
+      );
+      commentRepository.update.mockResolvedValue({} as any);
+      postRepository.update.mockResolvedValue({} as any);
+
+      await service['createComments'](mockUsers);
+
+      expect(commentRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          replyToId: null,
+          replyToUserId: null,
+        }),
+      );
+    });
+
+    it('should set replyToUserId to users[0].id when replyToId exists (line 213 branch)', async () => {
+      const mockUsers = [
+        { id: 1, mobile: '13800000001', nickname: '用户A' },
+        { id: 2, mobile: '13800000002', nickname: '用户B' },
+        { id: 3, mobile: '13800000003', nickname: '用户C' },
+      ] as User[];
+
+      const mockPosts = [
+        { id: 1, userId: 1, content: 'Test post 1' },
+      ] as SquarePost[];
+
+      postRepository.find.mockResolvedValue(mockPosts);
+
+      let callCount = 0;
+      commentRepository.create.mockImplementation((data: any) => data as SquareComment);
+      commentRepository.save.mockImplementation((comment: any) => {
+        callCount++;
+        return Promise.resolve({ ...comment, id: callCount } as SquareComment);
+      });
+      commentRepository.update.mockResolvedValue({} as any);
+      postRepository.update.mockResolvedValue({} as any);
+
+      await service['createComments'](mockUsers);
+
+      const replyCalls = (commentRepository.create as jest.Mock).mock.calls.filter(
+        call => call[0].replyToId !== null
+      );
+      expect(replyCalls.length).toBeGreaterThan(0);
+      expect(replyCalls[0][0]).toMatchObject({
+        replyToUserId: 2,
+      });
+    });
+
+    it('should handle empty savedComments array (line 223 branch)', async () => {
+      const mockUsers = [
+        { id: 1, mobile: '13800000001', nickname: '用户A' },
+        { id: 2, mobile: '13800000002', nickname: '用户B' },
+        { id: 3, mobile: '13800000003', nickname: '用户C' },
+      ] as User[];
+
+      const mockPosts = [
+        { id: 1, userId: 1, content: 'Test post 1' },
+      ] as SquarePost[];
+
+      postRepository.find.mockResolvedValue(mockPosts);
+      commentRepository.create.mockImplementation((data: any) => data as SquareComment);
+      commentRepository.save.mockResolvedValue({ id: 1 } as any);
+      commentRepository.update.mockResolvedValue({} as any);
+      postRepository.update.mockResolvedValue({} as any);
+
+      await service['createComments'](mockUsers);
+
+      expect(commentRepository.save).toHaveBeenCalled();
+      expect(postRepository.update).toHaveBeenCalledWith(1, { commentCount: 6 });
+    });
+
+    it('should test all branches including line 213 ternary operator', async () => {
+      const mockUsers = [
+        { id: 1, mobile: '13800000001', nickname: '用户A' },
+        { id: 2, mobile: '13800000002', nickname: '用户B' },
+        { id: 3, mobile: '13800000003', nickname: '用户C' },
+      ] as User[];
+
+      const mockPosts = [
+        { id: 1, userId: 1, content: 'Test post 1' },
+      ] as SquarePost[];
+
+      postRepository.find.mockResolvedValue(mockPosts);
+      commentRepository.create.mockImplementation((data: any) => data as SquareComment);
+
+      let callCount = 0;
+      commentRepository.save.mockImplementation((comment: any) => {
+        callCount++;
+        return Promise.resolve({ ...comment, id: callCount } as SquareComment);
+      });
+
+      commentRepository.update.mockResolvedValue({} as any);
+      postRepository.update.mockResolvedValue({} as any);
+
+      await service['createComments'](mockUsers);
+
+      const createCalls = (commentRepository.create as jest.Mock).mock.calls;
+
+      // Verify both branches of line 213: c.replyToId ? users[0].id : null
+      const commentsWithNullReplyToId = createCalls.filter(call => call[0].replyToId === null);
+      const commentsWithReplyToId = createCalls.filter(call => call[0].replyToId !== null);
+
+      expect(commentsWithNullReplyToId.length).toBeGreaterThan(0);
+      expect(commentsWithReplyToId.length).toBeGreaterThan(0);
+
+      // Verify null branch
+      commentsWithNullReplyToId.forEach(call => {
+        expect(call[0].replyToUserId).toBeNull();
+      });
+
+      // Verify truthy branch
+      commentsWithReplyToId.forEach(call => {
+        expect(call[0].replyToUserId).toBe(2);
+      });
+    });
   });
 
   describe('createLikes', () => {
@@ -475,7 +605,7 @@ describe('TestDataService', () => {
       );
     });
 
-    it('should skip reports if postId is undefined', async () => {
+    it('should skip reports if postId is undefined (line 183 branch)', async () => {
       const mockUsers = [
         { id: 1 },
         { id: 2 },
@@ -488,6 +618,27 @@ describe('TestDataService', () => {
       await service['createReports'](mockUsers);
 
       expect(reportRepository.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle posts[1]?.id when posts[1] is undefined (line 179 optional chaining)', async () => {
+      const mockUsers = [
+        { id: 1 },
+        { id: 2 },
+        { id: 3 },
+      ] as User[];
+
+      postRepository.find.mockResolvedValue([{ id: 1 }] as SquarePost[]);
+      reportRepository.save.mockResolvedValue({} as PostReport);
+
+      await service['createReports'](mockUsers);
+
+      expect(reportRepository.save).toHaveBeenCalledTimes(1);
+      expect(reportRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reporterId: 2,
+          postId: 1,
+        }),
+      );
     });
   });
 });
